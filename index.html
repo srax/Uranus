@@ -600,12 +600,8 @@
                 this.updateCounter();
                 this.saveProgress();
                 
-                // Visual effects
-                this.createFartParticles(point);
+                // Only sound and animation - no particles or shake
                 this.playFartSound();
-                this.shakeCamera();
-                
-                // Play the click animation: First.png → second.png → third.png → fourth.png → First.png
                 this.playClickAnimation();
                 
                 // Check for special events
