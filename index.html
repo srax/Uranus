@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🪐</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script type="module">
+        import { animate, stagger } from "https://cdn.jsdelivr.net/npm/motion@10/dist/motion.es.js";
+        window.motion = { animate, stagger };
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000011;
+            overflow: hidden;
+            cursor: crosshair;
+            font-family: Arial, sans-serif;
+        }
+
+        #scene-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            color: #00ffff;
+            font-size: 2rem;
+            text-shadow: 0 0 10px #00ffff;
+            user-select: none;
+        }
+
+        .mute-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        .mute-btn:hover {
+            opacity: 1;
+        }
+
+        .emoji-explosion {
+            position: fixed;
+            font-size: 3rem;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .social-links {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-links a {
+            font-size: 2rem;
+            text-decoration: none;
+            opacity: 0.7;
+            transition: all 0.3s;
+        }
+
+        .social-links a:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            .hud {
+                font-size: 1.5rem;
+            }
+            .social-links {
+                bottom: 10px;
+                right: 10px;
+            }
+            .social-links a {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    
+    <div class="hud">
+        <div id="fart-counter">💨 0</div>
+    </div>
+    
+    <button class="mute-btn" id="muteBtn">🔊</button>
+    
+    <div class="social-links">
+        <a href="https://twitter.com/intent/tweet?text=I%20just%20made%20Uranus%20fart%20in%203D!%20🚀💨&url=https://enteruranus.com" target="_blank">🐦</a>
+        <a href="https://t.me/share/url?url=https://enteruranus.com&text=I%20just%20made%20Uranus%20fart%20in%203D!%20🚀💨" target="_blank">✈️</a>
+    </div>
+
+    <script>
+        class UranusUniverse {
+            constructor() {
+                this.fartCount = 0;
+                this.isMuted = false;
+                this.audioContext = null;
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.uranusPlanet = null;
+                this.flyingObjects = [];
+                this.particles = [];
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.isInsideUranus = false;
+                this.cameraTarget = new THREE.Vector3(0, 0, 0);
+                this.init();
+            }
+
+            init() {
+                this.setupAudio();
+                this.createScene();
+                this.createUranus();
+                this.createStarfield();
+                this.createFlyingObjects();
+                this.setupEventListeners();
+                this.loadProgress();
+                this.animate();
+                
+                // Spawn flying objects periodically
+                setInterval(() => this.spawnFlyingObject(), 2000);
+            }
+
+            setupAudio() {
+                if ('AudioContext' in window || 'webkitAudioContext' in window) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // Load the real fart sound
+                this.fartAudio = new Audio('sound_effects/proud-fart-288263.mp3');
+                this.fartAudio.preload = 'auto';
+            }
+
+            createUranus() {
+                // Create a 2D plane for sprite animation instead of 3D sphere
+                const geometry = new THREE.PlaneGeometry(4, 4);
+                
+                // Create high-resolution canvas for sprite animation with transparency
+                this.spriteCanvas = document.createElement('canvas');
+                this.spriteCanvas.width = 1024;
+                this.spriteCanvas.height = 1024;
+                this.spriteCtx = this.spriteCanvas.getContext('2d');
+                
+                // Enable high-quality image rendering
+                this.spriteCtx.imageSmoothingEnabled = true;
+                this.spriteCtx.imageSmoothingQuality = 'high';
+                
+                // Enable transparency
+                this.spriteCtx.globalCompositeOperation = 'source-over';
+                
+                // Animation properties for your 4 frames
+                this.currentFrame = 0;
+                this.totalFrames = 4;
+                this.isAnimating = false;
+                this.animationSpeed = 150; // 150ms per frame = 600ms total (25% faster)
+                
+                // Load your custom image sequence
+                this.loadCustomImageSequence();
+                
+                // Create texture from canvas with transparency
+                this.spriteTexture = new THREE.CanvasTexture(this.spriteCanvas);
+                this.spriteTexture.needsUpdate = true;
+                // Remove flipY to keep original orientation
+                
+                const material = new THREE.MeshBasicMaterial({ 
+                    map: this.spriteTexture,
+                    transparent: true,
+                    alphaTest: 0.1,
+                    side: THREE.DoubleSide
+                });
+                
+                this.uranusPlanet = new THREE.Mesh(geometry, material);
+                this.uranusPlanet.userData = { type: 'uranus' };
+                this.uranusPlanet.position.set(0, 0, 0);
+                this.scene.add(this.uranusPlanet);
+                
+                console.log('Created static Uranus plane with transparency');
+            }
+            
+            // Load your custom 4-frame sequence
+            loadCustomImageSequence() {
+                const imagePaths = [
+                    'Assets/First.png',     // Frame 0 - Normal planet (capital F)
+                    'Assets/second.png',    // Frame 1 - Animation frame 1 (lowercase)
+                    'Assets/third.png',     // Frame 2 - Animation frame 2 (lowercase)
+                    'Assets/fourth.png'     // Frame 3 - Animation frame 3 (lowercase)
+                ];
+                
+                console.log('Loading planet image sequence:', imagePaths);
+                
+                this.imageSequence = [];
+                this.totalFrames = imagePaths.length;
+                this.currentFrame = 0;
+                this.isAnimating = false;
+                this.imagesLoaded = 0;
+                
+                // Load all images with better error handling
+                imagePaths.forEach((path, index) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log(`✓ Loaded planet image ${index + 1}/${imagePaths.length}: ${path} (${img.naturalWidth}x${img.naturalHeight})`);
+                        this.imagesLoaded++;
+                        
+                        if (this.imagesLoaded === imagePaths.length) {
+                            console.log('🎉 All planet images loaded! Showing First.png...');
+                            console.log('Image sequence status:', this.imageSequence.map((img, i) => `Frame ${i}: ${img.complete ? '✅' : '❌'} ${img.naturalWidth}x${img.naturalHeight}`));
+                            // Show the first frame (normal planet)
+                            setTimeout(() => this.drawImageFrame(0), 100);
+                        }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error(`❌ Failed to load planet image: ${path}`, error);
+                        // Try to continue with other images
+                        this.imagesLoaded++;
+                    };
+                    
+                    this.imageSequence[index] = img;
+                    img.src = path;
+                });
+            }
+            
+            // Draw frame from image sequence with proper transparency
+            drawImageFrame(frameIndex) {
+                if (!this.imageSequence || !this.imageSequence[frameIndex]) {
+                    console.error(`❌ Planet image not ready: frameIndex=${frameIndex}`);
+                    return;
+                }
+                
+                const img = this.imageSequence[frameIndex];
+                if (!img.complete || img.naturalWidth === 0) {
+                    console.error(`❌ Planet image not fully loaded: frameIndex=${frameIndex}, complete=${img.complete}, naturalWidth=${img.naturalWidth}`);
+                    return;
+                }
+                
+                // Clear canvas completely with transparency
+                this.spriteCtx.clearRect(0, 0, this.spriteCanvas.width, this.spriteCanvas.height);
+                
+                // Save context state
+                this.spriteCtx.save();
+                
+                try {
+                    // Draw the planet image centered with proper transparency
+                    this.spriteCtx.globalCompositeOperation = 'source-over';
+                    this.spriteCtx.drawImage(
+                        img,
+                        0, 0, img.naturalWidth, img.naturalHeight, // Source
+                        0, 0, this.spriteCanvas.width, this.spriteCanvas.height // Destination
+                    );
+                    
+                    console.log(`✅ Successfully drew planet frame: ${frameIndex} (${img.src.split('/').pop()}) - ${img.naturalWidth}x${img.naturalHeight}`);
+                } catch (error) {
+                    console.error(`❌ Error drawing frame ${frameIndex}:`, error);
+                }
+                
+                // Restore context state
+                this.spriteCtx.restore();
+                
+                // Force texture update
+                this.spriteTexture.needsUpdate = true;
+            }
+            
+            // Play the click animation: First.png → second.png → third.png → fourth.png → First.png
+            playClickAnimation() {
+                if (this.isAnimating) {
+                    console.log('🚫 Animation already in progress, skipping');
+                    return; // Don't interrupt current animation
+                }
+                
+                if (this.imagesLoaded < 4) {
+                    console.log('🚫 Images not fully loaded yet, skipping animation');
+                    return;
+                }
+                
+                console.log('🎬 Starting planet click animation...');
+                console.log('Current animation state:', {
+                    isAnimating: this.isAnimating,
+                    imagesLoaded: this.imagesLoaded,
+                    totalFrames: this.totalFrames,
+                    imageSequenceLength: this.imageSequence?.length
+                });
+                this.isAnimating = true;
+                
+                // Animation sequence: 1 → 2 → 3 → back to 0 (1 second total)
+                const sequence = [1, 2, 3, 0];
+                let sequenceIndex = 0;
+                
+                const animateFrame = () => {
+                    if (sequenceIndex < sequence.length) {
+                        const frameIndex = sequence[sequenceIndex];
+                        console.log(`🎞️ Animating to frame ${frameIndex} (${this.imageSequence[frameIndex]?.src})`);
+                        this.drawImageFrame(frameIndex);
+                        sequenceIndex++;
+                        
+                        // Continue animation after delay
+                        setTimeout(animateFrame, this.animationSpeed);
+                    } else {
+                        // Animation complete
+                        this.isAnimating = false;
+                        console.log('✅ Planet click animation complete - back to frame 0');
+                    }
+                };
+                
+                // Start the animation immediately
+                animateFrame();
+            }
+
+            createScene() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+                this.camera.position.set(0, 0, 10);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x000011, 1);
+                document.getElementById('scene-container').appendChild(this.renderer.domElement);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                directionalLight.position.set(5, 5, 5);
+                this.scene.add(directionalLight);
+            }
+
+            createStarfield() {
+                const starGeometry = new THREE.BufferGeometry();
+                const starVertices = [];
+                const starColors = [];
+                
+                for (let i = 0; i < 10000; i++) {
+                    const x = (Math.random() - 0.5) * 2000;
+                    const y = (Math.random() - 0.5) * 2000;
+                    const z = (Math.random() - 0.5) * 2000;
+                    starVertices.push(x, y, z);
+                    
+                    // Random star colors
+                    const color = new THREE.Color();
+                    color.setHSL(Math.random(), 0.5, Math.random() * 0.5 + 0.5);
+                    starColors.push(color.r, color.g, color.b);
+                }
+                
+                starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+                starGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+                
+                const starMaterial = new THREE.PointsMaterial({
+                    size: 2,
+                    vertexColors: true,
+                    transparent: true
+                });
+                
+                const stars = new THREE.Points(starGeometry, starMaterial);
+                this.scene.add(stars);
+            }
+
+            createFlyingObjects() {
+                // Pre-create some flying objects
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => this.spawnFlyingObject(), i * 1000);
+                }
+            }
+
+            spawnFlyingObject() {
+                const types = ['rocket', 'ufo', 'asteroid', 'satellite'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                let geometry, material, mesh;
+                
+                switch (type) {
+                    case 'rocket':
+                        geometry = new THREE.ConeGeometry(0.2, 1, 8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'ufo':
+                        geometry = new THREE.SphereGeometry(0.5, 16, 8);
+                        geometry.scale(1, 0.3, 1);
+                        material = new THREE.MeshPhongMaterial({ color: 0x44ff44 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'asteroid':
+                        geometry = new THREE.DodecahedronGeometry(0.5);
+                        material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'satellite':
+                        geometry = new THREE.BoxGeometry(0.3, 0.3, 0.8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                }
+                
+                // Random starting position
+                mesh.position.set(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 40,
+                    -50
+                );
+                
+                mesh.userData = { 
+                    type: type,
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.1,
+                        (Math.random() - 0.5) * 0.1,
+                        Math.random() * 0.2 + 0.1
+                    ),
+                    rotation: new THREE.Vector3(
+                        Math.random() * 0.02,
+                        Math.random() * 0.02,
+                        Math.random() * 0.02
+                    )
+                };
+                
+                this.scene.add(mesh);
+                this.flyingObjects.push(mesh);
+                
+                // Remove after it's far away
+                setTimeout(() => {
+                    this.scene.remove(mesh);
+                    const index = this.flyingObjects.indexOf(mesh);
+                    if (index > -1) {
+                        this.flyingObjects.splice(index, 1);
+                    }
+                }, 30000);
+            }
+
+            createFartParticles(position) {
+                const particleCount = 50;
+                const geometry = new THREE.BufferGeometry();
+                const positions = [];
+                const velocities = [];
+                
+                for (let i = 0; i < particleCount; i++) {
+                    // Start near the planet
+                    positions.push(
+                        position.x + (Math.random() - 0.5) * 2,
+                        position.y + (Math.random() - 0.5) * 2,
+                        position.z + (Math.random() - 0.5) * 2
+                    );
+                    
+                    // Random velocities
+                    velocities.push(
+                        (Math.random() - 0.5) * 0.2,
+                        (Math.random() - 0.5) * 0.2,
+                        (Math.random() - 0.5) * 0.2
+                    );
+                }
+                
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                
+                const material = new THREE.PointsMaterial({
+                    color: 0x88ff88,
+                    size: 0.1,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const particles = new THREE.Points(geometry, material);
+                particles.userData = { 
+                    velocities: velocities,
+                    life: 2.0
+                };
+                
+                this.scene.add(particles);
+                this.particles.push(particles);
+            }
+
+            updateParticles() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const particle = this.particles[i];
+                    const positions = particle.geometry.attributes.position.array;
+                    const velocities = particle.userData.velocities;
+                    
+                    for (let j = 0; j < positions.length; j += 3) {
+                        positions[j] += velocities[j];
+                        positions[j + 1] += velocities[j + 1];
+                        positions[j + 2] += velocities[j + 2];
+                    }
+                    
+                    particle.geometry.attributes.position.needsUpdate = true;
+                    particle.userData.life -= 0.016;
+                    particle.material.opacity = particle.userData.life / 2.0;
+                    
+                    if (particle.userData.life <= 0) {
+                        this.scene.remove(particle);
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.onWindowResize());
+                window.addEventListener('click', (event) => this.onMouseClick(event));
+                window.addEventListener('mousemove', (event) => this.onMouseMove(event));
+                
+                document.getElementById('muteBtn').addEventListener('click', () => this.toggleMute());
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            onMouseMove(event) {
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            }
+
+            onMouseClick(event) {
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+                
+                if (intersects.length > 0) {
+                    const clickedObject = intersects[0].object;
+                    
+                    if (clickedObject.userData.type === 'uranus' || clickedObject.parent?.userData.type === 'uranus') {
+                        this.touchUranus(intersects[0].point);
+                    } else {
+                        // Clicked on flying object
+                        this.explodeObject(clickedObject, intersects[0].point);
+                    }
+                }
+            }
+
+            playFartSound() {
+                if (this.isMuted) return;
+                
+                try {
+                    // Play the real fart sound
+                    if (this.fartAudio) {
+                        this.fartAudio.currentTime = 0; // Reset to beginning
+                        this.fartAudio.play().catch(error => {
+                            console.log('Audio play failed:', error);
+                            // Fallback to synthetic sound
+                            this.playSyntheticFartSound();
+                        });
+                    } else {
+                        // Fallback to synthetic sound
+                        this.playSyntheticFartSound();
+                    }
+                } catch (error) {
+                    console.log('Audio playback failed:', error);
+                    this.playSyntheticFartSound();
+                }
+            }
+            
+            playSyntheticFartSound() {
+                if (this.isMuted || !this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(80, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(40, this.audioContext.currentTime + 0.3);
+                
+                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.3);
+            }
+
+            touchUranus(point) {
+                this.fartCount++;
+                this.updateCounter();
+                this.saveProgress();
+                
+                // Visual effects
+                this.createFartParticles(point);
+                this.playFartSound();
+                this.shakeCamera();
+                
+                // Play the click animation: First.png → second.png → third.png → fourth.png → First.png
+                this.playClickAnimation();
+                
+                // Check for special events
+                this.checkEasterEggs();
+            }
+
+            explodeObject(object, point) {
+                // Remove the object
+                this.scene.remove(object);
+                const index = this.flyingObjects.indexOf(object);
+                if (index > -1) {
+                    this.flyingObjects.splice(index, 1);
+                }
+                
+                // Create explosion particles
+                this.createExplosion(point);
+                this.playExplosionSound();
+                
+                // Show emoji explosion
+                this.showEmojiExplosion(['💥', '⭐', '✨', '🔥'][Math.floor(Math.random() * 4)]);
+            }
+
+            createExplosion(position) {
+                const particleCount = 30;
+                const geometry = new THREE.BufferGeometry();
+                const positions = [];
+                const velocities = [];
+                
+                for (let i = 0; i < particleCount; i++) {
+                    positions.push(position.x, position.y, position.z);
+                    
+                    const velocity = new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.5,
+                        (Math.random() - 0.5) * 0.5,
+                        (Math.random() - 0.5) * 0.5
+                    );
+                    velocities.push(velocity.x, velocity.y, velocity.z);
+                }
+                
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                
+                const material = new THREE.PointsMaterial({
+                    color: 0xff8800,
+                    size: 0.2,
+                    transparent: true
+                });
+                
+                const explosion = new THREE.Points(geometry, material);
+                explosion.userData = { 
+                    velocities: velocities,
+                    life: 1.0
+                };
+                
+                this.scene.add(explosion);
+                this.particles.push(explosion);
+            }
+
+            shakeCamera() {
+                const originalPosition = this.camera.position.clone();
+                
+                // Check if motion library is available
+                if (window.motion && window.motion.animate) {
+                    window.motion.animate(this.camera.position, 
+                        { 
+                            x: [originalPosition.x, originalPosition.x + 0.2, originalPosition.x - 0.2, originalPosition.x],
+                            y: [originalPosition.y, originalPosition.y + 0.1, originalPosition.y - 0.1, originalPosition.y]
+                        },
+                        { duration: 0.3, ease: "ease-out" }
+                    );
+                } else {
+                    // Fallback: simple camera shake without motion library
+                    console.log('Motion library not available, using fallback shake');
+                    let shakeCount = 0;
+                    const shakeInterval = setInterval(() => {
+                        if (shakeCount < 6) {
+                            this.camera.position.x = originalPosition.x + (Math.random() - 0.5) * 0.4;
+                            this.camera.position.y = originalPosition.y + (Math.random() - 0.5) * 0.2;
+                            shakeCount++;
+                        } else {
+                            this.camera.position.copy(originalPosition);
+                            clearInterval(shakeInterval);
+                        }
+                    }, 50);
+                }
+            }
+
+            showEmojiExplosion(emoji) {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const emojiEl = document.createElement('div');
+                        emojiEl.className = 'emoji-explosion';
+                        emojiEl.textContent = emoji;
+                        emojiEl.style.left = Math.random() * window.innerWidth + 'px';
+                        emojiEl.style.top = Math.random() * window.innerHeight + 'px';
+                        document.body.appendChild(emojiEl);
+                        
+                        if (window.motion && window.motion.animate) {
+                            window.motion.animate(emojiEl, 
+                                { 
+                                    scale: [0, 2, 0],
+                                    rotate: [0, 360],
+                                    opacity: [0, 1, 0]
+                                },
+                                { duration: 1.5, ease: "ease-out" }
+                            ).finished.then(() => {
+                                emojiEl.remove();
+                            });
+                        } else {
+                            // Fallback without motion library
+                            setTimeout(() => emojiEl.remove(), 1500);
+                        }
+                    }, i * 100);
+                }
+            }
+
+            checkEasterEggs() {
+                if (this.fartCount === 69) {
+                    this.showEmojiExplosion('🍑');
+                    this.playSpecialSound();
+                } else if (this.fartCount === 100) {
+                    this.enterUranusMode();
+                } else if (this.fartCount === 420) {
+                    this.showEmojiExplosion('🌿');
+                    this.createRainbowEffect();
+                }
+            }
+
+            enterUranusMode() {
+                if (this.isInsideUranus) return;
+                
+                this.isInsideUranus = true;
+                this.showEmojiExplosion('🚀');
+                
+                // Zoom camera into planet
+                if (window.motion && window.motion.animate) {
+                    window.motion.animate(this.camera.position, 
+                        { z: 0.5 },
+                        { duration: 3, ease: "ease-in-out" }
+                    ).finished.then(() => {
+                        // Show inside Uranus for a moment
+                        setTimeout(() => {
+                            window.motion.animate(this.camera.position, 
+                                { z: 10 },
+                                { duration: 2, ease: "ease-out" }
+                            ).finished.then(() => {
+                                this.isInsideUranus = false;
+                            });
+                        }, 2000);
+                    });
+                } else {
+                    // Fallback without motion library
+                    console.log('Motion library not available for Uranus mode');
+                    this.camera.position.z = 0.5;
+                    setTimeout(() => {
+                        this.camera.position.z = 10;
+                        this.isInsideUranus = false;
+                    }, 5000);
+                }
+            }
+
+            createRainbowEffect() {
+                // Change the planet colors temporarily
+                const originalColor = this.uranusPlanet.material.color.clone();
+                const colors = [0xff0000, 0xff8800, 0xffff00, 0x00ff00, 0x0088ff, 0x4400ff, 0x8800ff];
+                
+                let colorIndex = 0;
+                const interval = setInterval(() => {
+                    this.uranusPlanet.material.color.setHex(colors[colorIndex]);
+                    colorIndex = (colorIndex + 1) % colors.length;
+                }, 200);
+                
+                setTimeout(() => {
+                    clearInterval(interval);
+                    this.uranusPlanet.material.color.copy(originalColor);
+                }, 3000);
+            }
+
+            playExplosionSound() {
+                if (this.isMuted || !this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+                
+                oscillator.type = 'square';
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.2);
+            }
+
+            playSpecialSound() {
+                if (this.isMuted || !this.audioContext) return;
+                
+                // Play a sequence of tones
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const oscillator = this.audioContext.createOscillator();
+                        const gainNode = this.audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(this.audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(200 + i * 100, this.audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+                        
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 0.2);
+                    }, i * 150);
+                }
+            }
+
+            updateCounter() {
+                document.getElementById('fart-counter').textContent = `💨 ${this.fartCount}`;
+            }
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                document.getElementById('muteBtn').textContent = this.isMuted ? '🔇' : '🔊';
+            }
+
+            saveProgress() {
+                localStorage.setItem('uranusProgress', JSON.stringify({
+                    farts: this.fartCount
+                }));
+            }
+
+            loadProgress() {
+                const saved = localStorage.getItem('uranusProgress');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    this.fartCount = data.farts || 0;
+                    this.updateCounter();
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                // Update flying objects
+                for (const obj of this.flyingObjects) {
+                    obj.position.add(obj.userData.velocity);
+                    obj.rotation.x += obj.userData.rotation.x;
+                    obj.rotation.y += obj.userData.rotation.y;
+                    obj.rotation.z += obj.userData.rotation.z;
+                }
+                
+                // Update particles
+                this.updateParticles();
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new UranusUniverse();
+        });
+
+        // Enable audio on first click
+        document.addEventListener('click', function enableAudio() {
+            if (window.AudioContext || window.webkitAudioContext) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioContext = new AudioContext();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }
+            document.removeEventListener('click', enableAudio);
+        }, { once: true });
+    </script>
+</body>
+</html>
