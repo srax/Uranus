@@ -42,9 +42,149 @@
             user-select: none;
         }
 
-        .mute-btn {
+        .country-info {
             position: fixed;
             top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            color: #ffffff;
+            text-align: center;
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px #000000;
+        }
+
+        .leaderboard {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 17, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            width: 350px;
+            max-height: 75vh;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        }
+
+        .leaderboard-header {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 255, 0.05));
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard h3 {
+            color: #ffffff;
+            text-align: center;
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .leaderboard-content {
+            max-height: calc(75vh - 70px);
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .leaderboard-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .leaderboard-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .leaderboard-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard-row {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .leaderboard-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .leaderboard-row.user-country {
+            background: rgba(0, 255, 255, 0.1);
+            border-left: 3px solid #00ffff;
+        }
+
+        .leaderboard-row.user-country:hover {
+            background: rgba(0, 255, 255, 0.15);
+        }
+
+        .leaderboard-cell {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+        }
+
+        .rank-cell {
+            width: 50px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .rank-cell.gold { color: #ffd700; }
+        .rank-cell.silver { color: #c0c0c0; }
+        .rank-cell.bronze { color: #cd7f32; }
+
+        .country-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .country-flag {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .country-name {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .score-cell {
+            text-align: right;
+            font-weight: 600;
+            color: #00ffff;
+            white-space: nowrap;
+            width: 80px;
+        }
+
+        .loading-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+        }
+
+        .mute-btn {
+            position: fixed;
+            bottom: 20px;
             right: 20px;
             z-index: 1000;
             background: none;
@@ -69,7 +209,7 @@
         .social-links {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 20px;
             z-index: 1000;
             display: flex;
             gap: 15px;
@@ -87,13 +227,27 @@
             transform: scale(1.2);
         }
 
+        .loading {
+            color: #888;
+            font-style: italic;
+        }
+
         @media (max-width: 768px) {
             .hud {
                 font-size: 1.5rem;
             }
+            .leaderboard {
+                width: 250px;
+                right: 10px;
+                top: 10px;
+            }
+            .country-info {
+                top: 10px;
+                font-size: 1rem;
+            }
             .social-links {
                 bottom: 10px;
-                right: 10px;
+                left: 10px;
             }
             .social-links a {
                 font-size: 1.5rem;
@@ -102,10 +256,29 @@
     </style>
 </head>
 <body>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
     <div id="scene-container"></div>
     
     <div class="hud">
         <div id="fart-counter">💨 0</div>
+    </div>
+    
+    <div class="country-info">
+        <div id="user-location">🌍 Detecting location...</div>
+    </div>
+    
+    <div class="leaderboard">
+        <div class="leaderboard-header">
+            <h3>🏆 Global Leaderboard</h3>
+        </div>
+        <div class="leaderboard-content">
+            <div id="leaderboard-table-container">
+                <div class="loading-state">Loading countries...</div>
+            </div>
+        </div>
     </div>
     
     <button class="mute-btn" id="muteBtn">🔊</button>
@@ -131,10 +304,55 @@
                 this.mouse = new THREE.Vector2();
                 this.isInsideUranus = false;
                 this.cameraTarget = new THREE.Vector3(0, 0, 0);
+                
+                // Global leaderboard properties
+                this.userCountry = null;
+                this.userCountryCode = null;
+                this.database = null;
+                this.leaderboardData = {};
+                this.countryNames = this.initCountryData();
+                
                 this.init();
             }
 
-            init() {
+            initCountryData() {
+                // Country code to name and flag mapping
+                return {
+                    'US': { name: 'United States', flag: '🇺🇸' },
+                    'CN': { name: 'China', flag: '🇨🇳' },
+                    'TH': { name: 'Thailand', flag: '🇹🇭' },
+                    'HK': { name: 'Hong Kong', flag: '🇭🇰' },
+                    'TW': { name: 'Taiwan', flag: '🇹🇼' },
+                    'JP': { name: 'Japan', flag: '🇯🇵' },
+                    'KR': { name: 'South Korea', flag: '🇰🇷' },
+                    'MY': { name: 'Malaysia', flag: '🇲🇾' },
+                    'SA': { name: 'Saudi Arabia', flag: '🇸🇦' },
+                    'ID': { name: 'Indonesia', flag: '🇮🇩' },
+                    'FI': { name: 'Finland', flag: '🇫🇮' },
+                    'SE': { name: 'Sweden', flag: '🇸🇪' },
+                    'GB': { name: 'United Kingdom', flag: '🇬🇧' },
+                    'DE': { name: 'Germany', flag: '🇩🇪' },
+                    'FR': { name: 'France', flag: '🇫🇷' },
+                    'IT': { name: 'Italy', flag: '🇮🇹' },
+                    'ES': { name: 'Spain', flag: '🇪🇸' },
+                    'BR': { name: 'Brazil', flag: '🇧🇷' },
+                    'CA': { name: 'Canada', flag: '🇨🇦' },
+                    'AU': { name: 'Australia', flag: '🇦🇺' },
+                    'IN': { name: 'India', flag: '🇮🇳' },
+                    'RU': { name: 'Russia', flag: '🇷🇺' },
+                    'MX': { name: 'Mexico', flag: '🇲🇽' },
+                    'AR': { name: 'Argentina', flag: '🇦🇷' },
+                    'PL': { name: 'Poland', flag: '🇵🇱' },
+                    'NL': { name: 'Netherlands', flag: '🇳🇱' },
+                    'BE': { name: 'Belgium', flag: '🇧🇪' },
+                    'CH': { name: 'Switzerland', flag: '🇨🇭' },
+                    'AT': { name: 'Austria', flag: '🇦🇹' },
+                    'NO': { name: 'Norway', flag: '🇳🇴' },
+                    'DK': { name: 'Denmark', flag: '🇩🇰' }
+                };
+            }
+
+            async init() {
                 this.setupAudio();
                 this.createScene();
                 this.createUranus();
@@ -144,8 +362,189 @@
                 this.loadProgress();
                 this.animate();
                 
+                // Initialize global leaderboard system
+                await this.initFirebase();
+                await this.detectUserLocation();
+                this.setupLeaderboardListener();
+                
                 // Spawn flying objects periodically
                 setInterval(() => this.spawnFlyingObject(), 2000);
+            }
+
+            async initFirebase() {
+                try {
+                    // Firebase configuration (using a demo project - replace with your own)
+                    const firebaseConfig = {
+                        apiKey: "demo-key",
+                        authDomain: "uranus-fart-leaderboard.firebaseapp.com",
+                        databaseURL: "https://uranus-fart-leaderboard-default-rtdb.firebaseio.com/",
+                        projectId: "uranus-fart-leaderboard"
+                    };
+
+                    // For demo purposes, we'll use localStorage as a fallback
+                    console.log('Firebase would be initialized here with real config');
+                    this.initLocalStorageLeaderboard();
+                } catch (error) {
+                    console.log('Firebase not available, using localStorage fallback');
+                    this.initLocalStorageLeaderboard();
+                }
+            }
+
+            initLocalStorageLeaderboard() {
+                // Initialize with demo data for development
+                const demoData = {
+                    'TH': 45000000,
+                    'HK': 32000000,
+                    'TW': 28000000,
+                    'JP': 25000000,
+                    'KR': 18000000,
+                    'MY': 15000000,
+                    'SA': 12000000,
+                    'US': 9500000,
+                    'ID': 8200000,
+                    'FI': 6800000,
+                    'SE': 5900000
+                };
+                
+                const stored = localStorage.getItem('globalLeaderboard');
+                if (!stored) {
+                    localStorage.setItem('globalLeaderboard', JSON.stringify(demoData));
+                    this.leaderboardData = demoData;
+                } else {
+                    this.leaderboardData = JSON.parse(stored);
+                }
+            }
+
+            async detectUserLocation() {
+                try {
+                    // Try multiple IP geolocation services
+                    const services = [
+                        'https://ipapi.co/json/',
+                        'https://ip-api.com/json/',
+                        'https://ipinfo.io/json'
+                    ];
+
+                    for (const service of services) {
+                        try {
+                            const response = await fetch(service);
+                            const data = await response.json();
+                            
+                            if (data.country_code || data.countryCode || data.country) {
+                                this.userCountryCode = data.country_code || data.countryCode || data.country;
+                                this.userCountry = this.countryNames[this.userCountryCode]?.name || this.userCountryCode;
+                                
+                                document.getElementById('user-location').innerHTML = 
+                                    `${this.countryNames[this.userCountryCode]?.flag || '🌍'} ${this.userCountry}`;
+                                
+                                console.log(`Detected location: ${this.userCountry} (${this.userCountryCode})`);
+                                break;
+                            }
+                        } catch (err) {
+                            console.log(`Service ${service} failed:`, err);
+                        }
+                    }
+                    
+                    if (!this.userCountryCode) {
+                        // Fallback to US for demo
+                        this.userCountryCode = 'US';
+                        this.userCountry = 'United States';
+                        document.getElementById('user-location').innerHTML = '🇺🇸 United States (Demo)';
+                    }
+                    
+                } catch (error) {
+                    console.log('Location detection failed:', error);
+                    this.userCountryCode = 'US';
+                    this.userCountry = 'United States';
+                    document.getElementById('user-location').innerHTML = '🌍 Location Unknown';
+                }
+            }
+
+            setupLeaderboardListener() {
+                // Update leaderboard every 5 seconds
+                this.updateLeaderboard();
+                setInterval(() => {
+                    this.updateLeaderboard();
+                }, 5000);
+            }
+
+            updateLeaderboard() {
+                const tableContainer = document.getElementById('leaderboard-table-container');
+                
+                // Sort countries by fart count
+                const sortedCountries = Object.entries(this.leaderboardData)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 10); // Top 10
+
+                if (sortedCountries.length === 0) {
+                    tableContainer.innerHTML = '<div class="loading-state">Loading countries...</div>';
+                    return;
+                }
+
+                let html = '<table class="leaderboard-table">';
+                
+                sortedCountries.forEach(([countryCode, count], index) => {
+                    const countryInfo = this.countryNames[countryCode];
+                    const isUserCountry = countryCode === this.userCountryCode;
+                    const rank = index + 1;
+                    
+                    let rankClass = 'rank-cell';
+                    let rankDisplay = rank;
+                    
+                    if (rank === 1) {
+                        rankClass += ' gold';
+                        rankDisplay = '🥇';
+                    } else if (rank === 2) {
+                        rankClass += ' silver';
+                        rankDisplay = '🥈';
+                    } else if (rank === 3) {
+                        rankClass += ' bronze';
+                        rankDisplay = '🥉';
+                    }
+                    
+                    html += `
+                        <tr class="leaderboard-row ${isUserCountry ? 'user-country' : ''}">
+                            <td class="${rankClass}">${rankDisplay}</td>
+                            <td class="leaderboard-cell">
+                                <div class="country-cell">
+                                    <span class="country-flag">${countryInfo?.flag || '🏳️'}</span>
+                                    <span class="country-name">${countryInfo?.name || countryCode}</span>
+                                </div>
+                            </td>
+                            <td class="leaderboard-cell score-cell">💨 ${this.formatNumberFull(count)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += '</table>';
+                tableContainer.innerHTML = html;
+            }
+
+            formatNumber(num) {
+                if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+                if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+                if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+                return num.toString();
+            }
+
+            formatNumberFull(num) {
+                // Format with commas for full numbers
+                return num.toLocaleString();
+            }
+
+            incrementGlobalCount() {
+                if (this.userCountryCode) {
+                    // Add to country's count
+                    this.leaderboardData[this.userCountryCode] = 
+                        (this.leaderboardData[this.userCountryCode] || 0) + 1;
+                    
+                    // Save to localStorage (in real app, this would sync to Firebase)
+                    localStorage.setItem('globalLeaderboard', JSON.stringify(this.leaderboardData));
+                    
+                    // Update leaderboard display
+                    this.updateLeaderboard();
+                    
+                    console.log(`Added fart for ${this.userCountry}: ${this.leaderboardData[this.userCountryCode]}`);
+                }
             }
 
             setupAudio() {
@@ -154,13 +553,13 @@
                 }
                 
                 // Load the real fart sound
-                this.fartAudio = new Audio('sound_effects/proud-fart-288263.mp3');
+                this.fartAudio = new Audio('sound_effects/PROUD_FART.mp3');
                 this.fartAudio.preload = 'auto';
             }
 
             createUranus() {
                 // Create a 2D plane for sprite animation instead of 3D sphere
-                const geometry = new THREE.PlaneGeometry(4, 4);
+                const geometry = new THREE.PlaneGeometry(7, 7);
                 
                 // Create high-resolution canvas for sprite animation with transparency
                 this.spriteCanvas = document.createElement('canvas');
@@ -179,7 +578,7 @@
                 this.currentFrame = 0;
                 this.totalFrames = 4;
                 this.isAnimating = false;
-                this.animationSpeed = 150; // 150ms per frame = 600ms total (25% faster)
+                this.animationSpeed = 100; // 100ms per frame = 400ms total (50% faster)
                 
                 // Load your custom image sequence
                 this.loadCustomImageSequence();
@@ -600,8 +999,15 @@
                 this.updateCounter();
                 this.saveProgress();
                 
-                // Only sound and animation - no particles or shake
+                // Add to global leaderboard
+                this.incrementGlobalCount();
+                
+                // Visual effects
+                this.createFartParticles(point);
                 this.playFartSound();
+                this.shakeCamera();
+                
+                // Play the click animation: First.png → second.png → third.png → fourth.png → First.png
                 this.playClickAnimation();
                 
                 // Check for special events
@@ -660,32 +1066,26 @@
             }
 
             shakeCamera() {
+                // Simple camera shake without Motion One
                 const originalPosition = this.camera.position.clone();
+                const shakeIntensity = 0.2;
+                const shakeDuration = 300; // ms
+                const shakeSteps = 10;
+                const stepDuration = shakeDuration / shakeSteps;
                 
-                // Check if motion library is available
-                if (window.motion && window.motion.animate) {
-                    window.motion.animate(this.camera.position, 
-                        { 
-                            x: [originalPosition.x, originalPosition.x + 0.2, originalPosition.x - 0.2, originalPosition.x],
-                            y: [originalPosition.y, originalPosition.y + 0.1, originalPosition.y - 0.1, originalPosition.y]
-                        },
-                        { duration: 0.3, ease: "ease-out" }
-                    );
-                } else {
-                    // Fallback: simple camera shake without motion library
-                    console.log('Motion library not available, using fallback shake');
-                    let shakeCount = 0;
-                    const shakeInterval = setInterval(() => {
-                        if (shakeCount < 6) {
-                            this.camera.position.x = originalPosition.x + (Math.random() - 0.5) * 0.4;
-                            this.camera.position.y = originalPosition.y + (Math.random() - 0.5) * 0.2;
-                            shakeCount++;
-                        } else {
-                            this.camera.position.copy(originalPosition);
-                            clearInterval(shakeInterval);
-                        }
-                    }, 50);
-                }
+                let step = 0;
+                const shakeInterval = setInterval(() => {
+                    if (step < shakeSteps) {
+                        // Random shake
+                        this.camera.position.x = originalPosition.x + (Math.random() - 0.5) * shakeIntensity;
+                        this.camera.position.y = originalPosition.y + (Math.random() - 0.5) * shakeIntensity * 0.5;
+                        step++;
+                    } else {
+                        // Return to original position
+                        this.camera.position.copy(originalPosition);
+                        clearInterval(shakeInterval);
+                    }
+                }, stepDuration);
             }
 
             showEmojiExplosion(emoji) {
