@@ -57,29 +57,30 @@
 
         .leaderboard {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 1000;
             background: rgba(0, 0, 17, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            width: 350px;
-            max-height: 75vh;
+            border-radius: 0 0 12px 12px;
+            border-top: none;
+            width: 400px;
             overflow: hidden;
             backdrop-filter: blur(20px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-            transition: width 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
         }
 
         .leaderboard.collapsed {
-            width: 60px;
+            height: 60px;
         }
 
         .leaderboard-toggle {
             position: absolute;
-            top: 50%;
-            right: -15px;
-            transform: translateY(-50%);
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(0, 255, 255, 0.8);
             border: none;
             border-radius: 50%;
@@ -97,7 +98,7 @@
 
         .leaderboard-toggle:hover {
             background: rgba(0, 255, 255, 1);
-            transform: translateY(-50%) scale(1.1);
+            transform: translateX(-50%) scale(1.1);
         }
 
         .leaderboard-header {
@@ -118,21 +119,55 @@
             gap: 8px;
         }
 
+        .leaderboard-preview {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard-preview-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .leaderboard-preview-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .top-country {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #ffd700;
+        }
+
+        .leaderboard-header {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 255, 0.05));
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
         .leaderboard-content {
-            max-height: calc(75vh - 70px);
+            max-height: 400px;
             overflow-y: auto;
             padding: 8px 0;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
         }
 
-        .leaderboard.collapsed .leaderboard-content {
-            opacity: 0;
-            pointer-events: none;
-        }
-
+        .leaderboard.collapsed .leaderboard-content,
         .leaderboard.collapsed .leaderboard-header {
-            opacity: 0;
-            pointer-events: none;
+            max-height: 0;
+            padding: 0;
+            overflow: hidden;
         }
 
         .leaderboard-content::-webkit-scrollbar {
@@ -316,8 +351,18 @@
         <div id="user-location">🌍 Detecting location...</div>
     </div>
     
-    <div class="leaderboard" id="leaderboard">
-        <button class="leaderboard-toggle" id="leaderboardToggle">◀</button>
+    <div class="leaderboard collapsed" id="leaderboard">
+        <div class="leaderboard-preview">
+            <div class="leaderboard-preview-left">
+                <span>#1 Leading:</span>
+            </div>
+            <div class="leaderboard-preview-right">
+                <div class="top-country" id="top-country-preview">
+                    <span class="loading-state">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <button class="leaderboard-toggle" id="leaderboardToggle">▼</button>
         <div class="leaderboard-header">
             <h3>💨 Global Fartboard</h3>
         </div>
@@ -529,6 +574,7 @@
 
             updateLeaderboard() {
                 const tableContainer = document.getElementById('leaderboard-table-container');
+                const topCountryPreview = document.getElementById('top-country-preview');
                 
                 // Sort countries by fart count
                 const sortedCountries = Object.entries(this.leaderboardData)
@@ -537,7 +583,24 @@
 
                 if (sortedCountries.length === 0) {
                     tableContainer.innerHTML = '<div class="loading-state">Loading countries...</div>';
+                    topCountryPreview.innerHTML = '<span class="loading-state">Loading...</span>';
                     return;
+                }
+
+                // Update top country preview
+                if (sortedCountries.length > 0) {
+                    const [topCountryCode, topCount] = sortedCountries[0];
+                    const topCountryInfo = this.countryNames[topCountryCode];
+                    const topDisplayName = topCountryInfo?.name || 'Unknown';
+                    const topFlagIcon = `<span class="fi fi-${topCountryCode.toLowerCase()}" 
+                                              style="width: 18px; height: 14px; border-radius: 2px;" 
+                                              title="Flag of ${topDisplayName}"></span>`;
+                    
+                    topCountryPreview.innerHTML = `
+                        ${topFlagIcon}
+                        <span>${topDisplayName}</span>
+                        <span style="color: #00ffff;">💨 ${this.formatNumberFull(topCount)}</span>
+                    `;
                 }
 
                 let html = '<table class="leaderboard-table">';
@@ -1304,11 +1367,13 @@
                 const isCollapsed = leaderboard.classList.contains('collapsed');
                 
                 if (isCollapsed) {
+                    // Expand - show full leaderboard
                     leaderboard.classList.remove('collapsed');
-                    toggleBtn.textContent = '◀';
+                    toggleBtn.textContent = '▲';
                 } else {
+                    // Collapse - show only preview
                     leaderboard.classList.add('collapsed');
-                    toggleBtn.textContent = '▶';
+                    toggleBtn.textContent = '▼';
                 }
             }
 
