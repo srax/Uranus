@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🪐</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.5.0/css/flag-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script type="module">
         import { animate, stagger } from "https://cdn.jsdelivr.net/npm/motion@10/dist/motion.es.js";
@@ -67,6 +68,36 @@
             overflow: hidden;
             backdrop-filter: blur(20px);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            transition: width 0.3s ease;
+        }
+
+        .leaderboard.collapsed {
+            width: 60px;
+        }
+
+        .leaderboard-toggle {
+            position: absolute;
+            top: 50%;
+            right: -15px;
+            transform: translateY(-50%);
+            background: rgba(0, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #000;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .leaderboard-toggle:hover {
+            background: rgba(0, 255, 255, 1);
+            transform: translateY(-50%) scale(1.1);
         }
 
         .leaderboard-header {
@@ -91,6 +122,17 @@
             max-height: calc(75vh - 70px);
             overflow-y: auto;
             padding: 8px 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .leaderboard.collapsed .leaderboard-content {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .leaderboard.collapsed .leaderboard-header {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .leaderboard-content::-webkit-scrollbar {
@@ -141,6 +183,7 @@
             text-align: center;
             font-weight: 700;
             font-size: 1.2rem;
+            color: #ffffff;
         }
 
         .rank-cell.gold { color: #ffd700; }
@@ -156,8 +199,11 @@
         }
 
         .country-flag {
-            font-size: 1.4rem;
+            width: 24px;
+            height: 18px;
+            border-radius: 3px;
             flex-shrink: 0;
+            overflow: hidden;
         }
 
         .country-name {
@@ -270,9 +316,10 @@
         <div id="user-location">🌍 Detecting location...</div>
     </div>
     
-    <div class="leaderboard">
+    <div class="leaderboard" id="leaderboard">
+        <button class="leaderboard-toggle" id="leaderboardToggle">◀</button>
         <div class="leaderboard-header">
-            <h3>🏆 Global Leaderboard</h3>
+            <h3>💨 Global Fartboard</h3>
         </div>
         <div class="leaderboard-content">
             <div id="leaderboard-table-container">
@@ -310,7 +357,10 @@
                 this.userCountryCode = null;
                 this.database = null;
                 this.leaderboardData = {};
+                
+                // Initialize country mapping FIRST
                 this.countryNames = this.initCountryData();
+                console.log('Country names initialized:', this.countryNames);
                 
                 this.init();
             }
@@ -406,13 +456,18 @@
                     'SE': 5900000
                 };
                 
-                const stored = localStorage.getItem('globalLeaderboard');
-                if (!stored) {
-                    localStorage.setItem('globalLeaderboard', JSON.stringify(demoData));
-                    this.leaderboardData = demoData;
-                } else {
-                    this.leaderboardData = JSON.parse(stored);
-                }
+                // Force clear any old cached data
+                localStorage.removeItem('globalLeaderboard');
+                localStorage.setItem('globalLeaderboard', JSON.stringify(demoData));
+                this.leaderboardData = demoData;
+                
+                // Debug: Verify country mapping is working
+                console.log('=== DEBUGGING LEADERBOARD ===');
+                console.log('Demo data:', this.leaderboardData);
+                console.log('Country names mapping:', this.countryNames);
+                
+                // Test mapping for TH
+                console.log('TH maps to:', this.countryNames['TH']);
             }
 
             async detectUserLocation() {
@@ -501,13 +556,21 @@
                         rankDisplay = '🥉';
                     }
                     
+                    // Ensure we show flag + country name, never country codes
+                    const displayName = countryInfo?.name || 'Unknown';
+                    
+                    // Create flag icon using flag-icons library
+                    const flagIcon = `<span class="fi fi-${countryCode.toLowerCase()} country-flag" 
+                                           title="Flag of ${displayName}" 
+                                           aria-label="Flag of ${displayName}"></span>`;
+                    
                     html += `
                         <tr class="leaderboard-row ${isUserCountry ? 'user-country' : ''}">
                             <td class="${rankClass}">${rankDisplay}</td>
                             <td class="leaderboard-cell">
                                 <div class="country-cell">
-                                    <span class="country-flag">${countryInfo?.flag || '🏳️'}</span>
-                                    <span class="country-name">${countryInfo?.name || countryCode}</span>
+                                    ${flagIcon}
+                                    <span class="country-name">${displayName}</span>
                                 </div>
                             </td>
                             <td class="leaderboard-cell score-cell">💨 ${this.formatNumberFull(count)}</td>
@@ -559,7 +622,7 @@
 
             createUranus() {
                 // Create a 2D plane for sprite animation instead of 3D sphere
-                const geometry = new THREE.PlaneGeometry(7, 7);
+                const geometry = new THREE.PlaneGeometry(10, 10);
                 
                 // Create high-resolution canvas for sprite animation with transparency
                 this.spriteCanvas = document.createElement('canvas');
@@ -923,6 +986,10 @@
                 window.addEventListener('mousemove', (event) => this.onMouseMove(event));
                 
                 document.getElementById('muteBtn').addEventListener('click', () => this.toggleMute());
+                document.getElementById('leaderboardToggle').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleLeaderboard();
+                });
             }
 
             onWindowResize() {
@@ -1002,12 +1069,8 @@
                 // Add to global leaderboard
                 this.incrementGlobalCount();
                 
-                // Visual effects
-                this.createFartParticles(point);
+                // Only sound and animation - no particles or shake
                 this.playFartSound();
-                this.shakeCamera();
-                
-                // Play the click animation: First.png → second.png → third.png → fourth.png → First.png
                 this.playClickAnimation();
                 
                 // Check for special events
@@ -1228,6 +1291,20 @@
             toggleMute() {
                 this.isMuted = !this.isMuted;
                 document.getElementById('muteBtn').textContent = this.isMuted ? '🔇' : '🔊';
+            }
+
+            toggleLeaderboard() {
+                const leaderboard = document.getElementById('leaderboard');
+                const toggleBtn = document.getElementById('leaderboardToggle');
+                const isCollapsed = leaderboard.classList.contains('collapsed');
+                
+                if (isCollapsed) {
+                    leaderboard.classList.remove('collapsed');
+                    toggleBtn.textContent = '◀';
+                } else {
+                    leaderboard.classList.add('collapsed');
+                    toggleBtn.textContent = '▶';
+                }
             }
 
             saveProgress() {
