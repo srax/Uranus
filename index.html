@@ -488,8 +488,10 @@
                                 this.userCountryCode = data.country_code || data.countryCode || data.country;
                                 this.userCountry = this.countryNames[this.userCountryCode]?.name || this.userCountryCode;
                                 
-                                document.getElementById('user-location').innerHTML = 
-                                    `${this.countryNames[this.userCountryCode]?.flag || '🌍'} ${this.userCountry}`;
+                                const userFlagIcon = `<span class="fi fi-${this.userCountryCode.toLowerCase()}" 
+                                                           style="width: 20px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 2px;" 
+                                                           title="Flag of ${this.userCountry}"></span>`;
+                                document.getElementById('user-location').innerHTML = `${userFlagIcon}${this.userCountry}`;
                                 
                                 console.log(`Detected location: ${this.userCountry} (${this.userCountryCode})`);
                                 break;
@@ -503,14 +505,17 @@
                         // Fallback to US for demo
                         this.userCountryCode = 'US';
                         this.userCountry = 'United States';
-                        document.getElementById('user-location').innerHTML = '🇺🇸 United States (Demo)';
+                        const fallbackFlag = `<span class="fi fi-us" 
+                                                   style="width: 20px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 2px;" 
+                                                   title="Flag of United States"></span>`;
+                        document.getElementById('user-location').innerHTML = `${fallbackFlag}United States (Demo)`;
                     }
                     
                 } catch (error) {
                     console.log('Location detection failed:', error);
                     this.userCountryCode = 'US';
                     this.userCountry = 'United States';
-                    document.getElementById('user-location').innerHTML = '🌍 Location Unknown';
+                    document.getElementById('user-location').innerHTML = `<span style="margin-right: 8px;">🌍</span>Location Unknown`;
                 }
             }
 
