@@ -295,7 +295,7 @@
         }
 
         .social-links a {
-            font-size: 2rem;
+                font-size: 2rem;
             text-decoration: none;
             opacity: 0.7;
             transition: all 0.3s;
@@ -304,6 +304,125 @@
         .social-links a:hover {
             opacity: 1;
             transform: scale(1.2);
+        }
+
+        .trading-links {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 600px;
+        }
+
+        .trading-links .link-item {
+            display: block;
+            width: var(--desktop-icon-size, 40px);
+            height: var(--desktop-icon-size, 40px);
+            border-radius: 8px;
+            overflow: hidden;
+            opacity: 0.8;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        .trading-links .link-item:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .trading-links .link-item:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-10px);
+        }
+
+        .trading-links img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-5px);
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffffff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 1001;
+            pointer-events: none;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .ca-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #00ffff;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.1));
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .ca-button:hover {
+            color: #ffffff;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.4), rgba(0, 255, 255, 0.2));
+            border-color: rgba(0, 255, 255, 0.8);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+        }
+
+        .ca-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+        }
+
+        .copy-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 255, 255, 0.9);
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
         }
 
         .loading {
@@ -331,13 +450,53 @@
             .social-links a {
                 font-size: 1.5rem;
             }
+            .trading-links {
+                bottom: 15px;
+                left: 50%;
+                transform: translateX(-50%);
+                max-width: 90vw;
+            }
+            .trading-links .link-item {
+                width: var(--mobile-icon-size, 35px);
+                height: var(--mobile-icon-size, 35px);
+            }
         }
     </style>
 </head>
 <body>
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+        import { getDatabase, ref, set, get, onValue, increment } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+        import { getAnalytics } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js';
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5KRYguUg2u4zHS_r2DbI6S0WwJ11oeEk",
+            authDomain: "uranus-db22f.firebaseapp.com",
+            databaseURL: "https://uranus-db22f-default-rtdb.firebaseio.com/",
+            projectId: "uranus-db22f",
+            storageBucket: "uranus-db22f.firebasestorage.app",
+            messagingSenderId: "979661079223",
+            appId: "1:979661079223:web:2aa18fa4047aefdee44332",
+            measurementId: "G-6XPFCFFC8M"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const analytics = getAnalytics(app);
+
+        // Make Firebase available globally
+        window.firebaseApp = app;
+        window.firebaseDatabase = database;
+        window.firebaseAnalytics = analytics;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseGet = get;
+        window.firebaseOnValue = onValue;
+        window.firebaseIncrement = increment;
+    </script>
     
     <div id="scene-container"></div>
     
@@ -347,8 +506,8 @@
     
     <div class="country-info">
         <div id="user-location">🌍 Detecting location...</div>
-    </div>
-    
+        </div>
+        
     <div class="leaderboard collapsed" id="leaderboard">
         <div class="leaderboard-preview">
             <div class="leaderboard-preview-left">
@@ -357,11 +516,11 @@
             <div class="leaderboard-preview-right">
                 <div class="top-country" id="top-country-preview">
                     <span class="loading-state">Loading...</span>
-                </div>
             </div>
         </div>
+        </div>
         <div class="leaderboard-header">
-            <h3>💨 Global Fartboard</h3>
+            <h3 id="leaderboard-title">💨 Global Fartboard</h3>
         </div>
         <div class="leaderboard-content">
             <div id="leaderboard-table-container">
@@ -377,6 +536,55 @@
         <a href="https://twitter.com/intent/tweet?text=I%20just%20made%20Uranus%20fart%20in%203D!%20🚀💨&url=https://enteruranus.com" target="_blank">🐦</a>
         <a href="https://t.me/share/url?url=https://enteruranus.com&text=I%20just%20made%20Uranus%20fart%20in%203D!%20🚀💨" target="_blank">✈️</a>
     </div>
+    
+    <div class="trading-links">
+        <a href="https://x.com/Uranus_jup" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="X / Twitter" src="icons/twitter.png">
+            <span class="tooltip">X / Twitter</span>
+        </a>
+        
+        <a href="https://x.com/i/communities/1940787479281361171" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="Community" src="icons/community.png">
+            <span class="tooltip">Community</span>
+        </a>
+
+        <a href="https://dexscreener.com/solana/7cckzmrxbpfhwyzgpqpukl6beywaetsnhwnwe3jenevc" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="DexScreener" src="icons/dexscreener.png">
+            <span class="tooltip">DexScreener</span>
+        </a>
+
+        <a href="https://jup.ag/tokens/BFgdzMkTPdKKJeTipv2njtDEwhKxkgFueJQfJGt1jups" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="Buy on Jupiter" src="icons/jupiter.png">
+            <span class="tooltip">Buy on Jupiter</span>
+        </a>
+
+        <a href="https://www.bitmart.com/trade/en-US?symbol=URANUS_USDT&type=spot" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="Buy on BitMart" src="icons/bitmart.png">
+            <span class="tooltip">Buy on BitMart</span>
+        </a>
+
+        <a href="https://www.kcex.com/exchange/URANUS_USDT?_from=search" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="Buy on KCEX" src="icons/kcex.png">
+            <span class="tooltip">Buy on KCEX</span>
+        </a>
+
+        <a href="https://www.lbank.com/nl/trade/uranus_usdt" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="Buy on LBank" src="icons/lbank.png">
+            <span class="tooltip">Buy on LBank</span>
+        </a>
+
+        <a href="https://solscan.io/token/BFgdzMkTPdKKJeTipv2njtDEwhKxkgFueJQfJGt1jups" target="_blank" rel="noopener noreferrer" class="link-item" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            <img alt="Solscan" src="icons/solscan.png">
+            <span class="tooltip">Solscan</span>
+        </a>
+
+        <button class="link-item ca-button" onclick="copyContractAddress()" style="--mobile-icon-size: 40px; --desktop-icon-size: 40px;">
+            CA
+            <span class="tooltip">Copy Contract Address</span>
+        </button>
+    </div>
+    
+    <div id="copyNotification" class="copy-notification">Contract address copied! 📋</div>
 
     <script>
         class UranusUniverse {
@@ -466,20 +674,78 @@
 
             async initFirebase() {
                 try {
-                    // Firebase configuration (using a demo project - replace with your own)
-                    const firebaseConfig = {
-                        apiKey: "demo-key",
-                        authDomain: "uranus-fart-leaderboard.firebaseapp.com",
-                        databaseURL: "https://uranus-fart-leaderboard-default-rtdb.firebaseio.com/",
-                        projectId: "uranus-fart-leaderboard"
-                    };
-
-                    // For demo purposes, we'll use localStorage as a fallback
-                    console.log('Firebase would be initialized here with real config');
-                    this.initLocalStorageLeaderboard();
+                    // Wait for Firebase to be available
+                    await this.waitForFirebase();
+                    
+                    console.log('Firebase initialized successfully');
+                    this.database = window.firebaseDatabase;
+                    
+                    // Initialize leaderboard data from Firebase
+                    await this.loadLeaderboardFromFirebase();
+                    
                 } catch (error) {
-                    console.log('Firebase not available, using localStorage fallback');
+                    console.log('Firebase not available, using localStorage fallback:', error);
                     this.initLocalStorageLeaderboard();
+                }
+            }
+
+            async waitForFirebase() {
+                return new Promise((resolve, reject) => {
+                    const checkFirebase = () => {
+                        if (window.firebaseDatabase) {
+                            resolve();
+                        } else {
+                            setTimeout(checkFirebase, 100);
+                        }
+                    };
+                    checkFirebase();
+                    
+                    // Timeout after 5 seconds
+                    setTimeout(() => reject(new Error('Firebase timeout')), 5000);
+                });
+            }
+
+            async loadLeaderboardFromFirebase() {
+                try {
+                    const leaderboardRef = window.firebaseRef(this.database, 'leaderboard');
+                    const snapshot = await window.firebaseGet(leaderboardRef);
+                    
+                    if (snapshot.exists()) {
+                        this.leaderboardData = snapshot.val();
+                        console.log('Loaded leaderboard from Firebase:', this.leaderboardData);
+                    } else {
+                        // Initialize with demo data if no data exists
+                        console.log('No Firebase data found, initializing with demo data');
+                        await this.initFirebaseWithDemoData();
+                    }
+                } catch (error) {
+                    console.error('Error loading from Firebase:', error);
+                    this.initLocalStorageLeaderboard();
+                }
+            }
+
+            async initFirebaseWithDemoData() {
+                const demoData = {
+                    'TH': 45000000,
+                    'HK': 32000000,
+                    'TW': 28000000,
+                    'JP': 25000000,
+                    'KR': 18000000,
+                    'MY': 15000000,
+                    'US': 9500000,
+                    'ID': 8200000,
+                    'FI': 6800000,
+                    'SE': 5900000
+                };
+
+                try {
+                    const leaderboardRef = window.firebaseRef(this.database, 'leaderboard');
+                    await window.firebaseSet(leaderboardRef, demoData);
+                    this.leaderboardData = demoData;
+                    console.log('Initialized Firebase with demo data');
+                } catch (error) {
+                    console.error('Error initializing Firebase with demo data:', error);
+                    this.leaderboardData = demoData;
                 }
             }
 
@@ -492,7 +758,6 @@
                     'JP': 25000000,
                     'KR': 18000000,
                     'MY': 15000000,
-                    'SA': 12000000,
                     'US': 9500000,
                     'ID': 8200000,
                     'FI': 6800000,
@@ -563,16 +828,29 @@
             }
 
             setupLeaderboardListener() {
-                // Update leaderboard every 5 seconds
-                this.updateLeaderboard();
-                setInterval(() => {
+                if (this.database) {
+                    // Use Firebase real-time listener
+                    const leaderboardRef = window.firebaseRef(this.database, 'leaderboard');
+                    window.firebaseOnValue(leaderboardRef, (snapshot) => {
+                        if (snapshot.exists()) {
+                            this.leaderboardData = snapshot.val();
+                            this.updateLeaderboard();
+                            console.log('Real-time update from Firebase:', this.leaderboardData);
+                        }
+                    });
+                } else {
+                    // Fallback to polling for localStorage
                     this.updateLeaderboard();
-                }, 5000);
+                    setInterval(() => {
+                        this.updateLeaderboard();
+                    }, 5000);
+                }
             }
 
             updateLeaderboard() {
                 const tableContainer = document.getElementById('leaderboard-table-container');
                 const topCountryPreview = document.getElementById('top-country-preview');
+                const leaderboardTitle = document.getElementById('leaderboard-title');
                 
                 // Sort countries by fart count
                 const sortedCountries = Object.entries(this.leaderboardData)
@@ -582,7 +860,16 @@
                 if (sortedCountries.length === 0) {
                     tableContainer.innerHTML = '<div class="loading-state">Loading countries...</div>';
                     topCountryPreview.innerHTML = '<span class="loading-state">Loading...</span>';
+                    leaderboardTitle.innerHTML = '💨 Global Fartboard';
                     return;
+                }
+
+                // Update leaderboard title with top country
+                if (sortedCountries.length > 0) {
+                    const [topCountryCode, topCount] = sortedCountries[0];
+                    const topCountryInfo = this.countryNames[topCountryCode];
+                    const topDisplayName = topCountryInfo?.name || 'Unknown';
+                    leaderboardTitle.innerHTML = `💨 ${topDisplayName} touched Uranus the most`;
                 }
 
                 // Update top country preview
@@ -1087,7 +1374,7 @@
 
             playFartSound() {
                 if (this.isMuted) return;
-                
+
                 try {
                     // Play the real fart sound
                     if (this.fartAudio) {
@@ -1110,22 +1397,22 @@
             playSyntheticFartSound() {
                 if (this.isMuted || !this.audioContext) return;
                 
-                const oscillator = this.audioContext.createOscillator();
-                const gainNode = this.audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(this.audioContext.destination);
-                
-                oscillator.frequency.setValueAtTime(80, this.audioContext.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(40, this.audioContext.currentTime + 0.3);
-                
-                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
-                
-                oscillator.type = 'sawtooth';
+                        const oscillator = this.audioContext.createOscillator();
+                        const gainNode = this.audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(this.audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(80, this.audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(40, this.audioContext.currentTime + 0.3);
+                        
+                        gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                        
+                        oscillator.type = 'sawtooth';
                 oscillator.start();
-                oscillator.stop(this.audioContext.currentTime + 0.3);
-            }
+                        oscillator.stop(this.audioContext.currentTime + 0.3);
+                    }
 
             touchUranus(point) {
                 this.fartCount++;
@@ -1271,14 +1558,14 @@
                         { duration: 3, ease: "ease-in-out" }
                     ).finished.then(() => {
                         // Show inside Uranus for a moment
-                        setTimeout(() => {
+                setTimeout(() => {
                             window.motion.animate(this.camera.position, 
                                 { z: 10 },
                                 { duration: 2, ease: "ease-out" }
                             ).finished.then(() => {
                                 this.isInsideUranus = false;
                             });
-                        }, 2000);
+                }, 2000);
                     });
                 } else {
                     // Fallback without motion library
@@ -1406,6 +1693,53 @@
                 
                 this.renderer.render(this.scene, this.camera);
             }
+        }
+
+        // Copy contract address function
+        function copyContractAddress() {
+            const contractAddress = 'BFgdzMkTPdKKJeTipv2njtDEwhKxkgFueJQfJGt1jups';
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(contractAddress).then(() => {
+                    showCopyNotification();
+                }).catch(() => {
+                    // Fallback to older method
+                    fallbackCopyToClipboard(contractAddress);
+                });
+            } else {
+                // Fallback for older browsers
+                fallbackCopyToClipboard(contractAddress);
+            }
+        }
+        
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopyNotification();
+            } catch (err) {
+                console.log('Copy failed:', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        function showCopyNotification() {
+            const notification = document.getElementById('copyNotification');
+            notification.style.opacity = '1';
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+            }, 2000);
         }
 
         // Initialize when page loads
