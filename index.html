@@ -73,24 +73,29 @@
         }
 
         .leaderboard.collapsed {
-            height: 60px;
+            height: auto;
+        }
+
+        .leaderboard.collapsed .leaderboard-content,
+        .leaderboard.collapsed .leaderboard-header {
+            max-height: 0;
+            padding: 0;
+            overflow: hidden;
         }
 
         .leaderboard-toggle {
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: relative;
+            margin: 8px auto;
             background: rgba(0, 255, 255, 0.8);
             border: none;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #000;
             transition: all 0.3s ease;
             z-index: 1001;
@@ -98,7 +103,7 @@
 
         .leaderboard-toggle:hover {
             background: rgba(0, 255, 255, 1);
-            transform: translateX(-50%) scale(1.1);
+            transform: scale(1.1);
         }
 
         .leaderboard-header {
@@ -161,13 +166,6 @@
             overflow-y: auto;
             padding: 8px 0;
             transition: all 0.3s ease;
-        }
-
-        .leaderboard.collapsed .leaderboard-content,
-        .leaderboard.collapsed .leaderboard-header {
-            max-height: 0;
-            padding: 0;
-            overflow: hidden;
         }
 
         .leaderboard-content::-webkit-scrollbar {
@@ -362,7 +360,6 @@
                 </div>
             </div>
         </div>
-        <button class="leaderboard-toggle" id="leaderboardToggle">▼</button>
         <div class="leaderboard-header">
             <h3>💨 Global Fartboard</h3>
         </div>
@@ -371,6 +368,7 @@
                 <div class="loading-state">Loading countries...</div>
             </div>
         </div>
+        <button class="leaderboard-toggle" id="leaderboardToggle">▼</button>
     </div>
     
     <button class="mute-btn" id="muteBtn">🔊</button>
