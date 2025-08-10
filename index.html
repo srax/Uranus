@@ -63,7 +63,7 @@
             z-index: 1000;
             background: rgba(0, 0, 17, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0 0 12px 12px;
+            border-radius: 0 0 20px 20px;
             border-top: none;
             width: 400px;
             overflow: hidden;
@@ -85,25 +85,27 @@
 
         .leaderboard-toggle {
             position: relative;
-            margin: 8px auto;
+            margin: 6px auto;
             background: rgba(0, 255, 255, 0.8);
             border: none;
             border-radius: 50%;
-            width: 32px;
-            height: 32px;
+            width: 24px;
+            height: 24px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 0.8rem;
             color: #000;
             transition: all 0.3s ease;
             z-index: 1001;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .leaderboard-toggle:hover {
             background: rgba(0, 255, 255, 1);
-            transform: scale(1.1);
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 255, 255, 0.4);
         }
 
         .leaderboard-header {
@@ -603,6 +605,26 @@
                 this.isInsideUranus = false;
                 this.cameraTarget = new THREE.Vector3(0, 0, 0);
                 
+                // Cat animation properties
+                this.catPlanet = null;
+                this.catSpriteCanvas = null;
+                this.catSpriteCtx = null;
+                this.catSpriteTexture = null;
+                this.catImageSequence = [];
+                this.catCurrentFrame = 0;
+                this.catIsAnimating = false;
+                this.catImagesLoaded = 0;
+                
+                // Pumpkid animation properties
+                this.pumpkidPlanet = null;
+                this.pumpkidSpriteCanvas = null;
+                this.pumpkidSpriteCtx = null;
+                this.pumpkidSpriteTexture = null;
+                this.pumpkidImageSequence = [];
+                this.pumpkidCurrentFrame = 0;
+                this.pumpkidIsAnimating = false;
+                this.pumpkidImagesLoaded = 0;
+                
                 // Global leaderboard properties
                 this.userCountry = null;
                 this.userCountryCode = null;
@@ -657,6 +679,8 @@
                 this.setupAudio();
                 this.createScene();
                 this.createUranus();
+                this.createCat();
+                this.createPumpkid();
                 this.createStarfield();
                 this.createFlyingObjects();
                 this.setupEventListeners();
@@ -971,6 +995,10 @@
                 // Load the real fart sound
                 this.fartAudio = new Audio('sound_effects/PROUD_FART.mp3');
                 this.fartAudio.preload = 'auto';
+                
+                // Load the slap sound for cat
+                this.slapAudio = new Audio('sound_effects/11L-Loud_slap_sound-1754727690182.mp3');
+                this.slapAudio.preload = 'auto';
             }
 
             createUranus() {
@@ -1147,6 +1175,340 @@
                 
                 // Start the animation immediately
                 animateFrame();
+            }
+
+            createCat() {
+                // Create a 2D plane for cat sprite animation
+                const catGeometry = new THREE.PlaneGeometry(7, 7); // Increased size by 1
+                
+                // Create high-resolution canvas for cat sprite animation with transparency
+                this.catSpriteCanvas = document.createElement('canvas');
+                this.catSpriteCanvas.width = 2048;
+                this.catSpriteCanvas.height = 2048;
+                this.catSpriteCtx = this.catSpriteCanvas.getContext('2d');
+                
+                // Enable high-quality image rendering
+                this.catSpriteCtx.imageSmoothingEnabled = true;
+                this.catSpriteCtx.imageSmoothingQuality = 'high';
+                
+                // Enable transparency
+                this.catSpriteCtx.globalCompositeOperation = 'source-over';
+                
+                // Cat animation properties for 2 frames
+                this.catCurrentFrame = 0;
+                this.catTotalFrames = 2;
+                this.catIsAnimating = false;
+                this.catAnimationSpeed = 150; // 150ms per frame
+                
+                // Load cat image sequence
+                this.loadCatImageSequence();
+                
+                // Create texture from canvas with transparency
+                this.catSpriteTexture = new THREE.CanvasTexture(this.catSpriteCanvas);
+                this.catSpriteTexture.needsUpdate = true;
+                
+                const catMaterial = new THREE.MeshBasicMaterial({ 
+                    map: this.catSpriteTexture,
+                    transparent: true,
+                    alphaTest: 0.1,
+                    side: THREE.DoubleSide
+                });
+                
+                this.catPlanet = new THREE.Mesh(catGeometry, catMaterial);
+                this.catPlanet.userData = { type: 'cat' };
+                // Position to the left of the planet and further away
+                this.catPlanet.position.set(-15, 0, -5);
+                this.scene.add(this.catPlanet);
+                
+                console.log('Created cat plane with transparency at position (-15, 0, -5)');
+            }
+            
+            // Load cat 2-frame sequence
+            loadCatImageSequence() {
+                const catImagePaths = [
+                    'Assets/Firstcat.png',     // Frame 0 - Normal cat
+                    'Assets/secondcat.png'     // Frame 1 - Animation frame
+                ];
+                
+                console.log('Loading cat image sequence:', catImagePaths);
+                
+                this.catImageSequence = [];
+                this.catTotalFrames = catImagePaths.length;
+                this.catCurrentFrame = 0;
+                this.catIsAnimating = false;
+                this.catImagesLoaded = 0;
+                
+                // Load all cat images with error handling
+                catImagePaths.forEach((path, index) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log(`✓ Loaded cat image ${index + 1}/${catImagePaths.length}: ${path} (${img.naturalWidth}x${img.naturalHeight})`);
+                        this.catImagesLoaded++;
+                        
+                        if (this.catImagesLoaded === catImagePaths.length) {
+                            console.log('🎉 All cat images loaded! Showing Firstcat.png...');
+                            console.log('Cat image sequence status:', this.catImageSequence.map((img, i) => `Frame ${i}: ${img.complete ? '✅' : '❌'} ${img.naturalWidth}x${img.naturalHeight}`));
+                            // Show the first frame (normal cat)
+                            setTimeout(() => this.drawCatImageFrame(0), 100);
+                        }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error(`❌ Failed to load cat image: ${path}`, error);
+                        this.catImagesLoaded++;
+                    };
+                    
+                    this.catImageSequence[index] = img;
+                    img.src = path;
+                });
+            }
+            
+            // Draw cat frame from image sequence with proper transparency
+            drawCatImageFrame(frameIndex) {
+                if (!this.catImageSequence || !this.catImageSequence[frameIndex]) {
+                    console.error(`❌ Cat image not ready: frameIndex=${frameIndex}`);
+                    return;
+                }
+                
+                const img = this.catImageSequence[frameIndex];
+                if (!img.complete || img.naturalWidth === 0) {
+                    console.error(`❌ Cat image not fully loaded: frameIndex=${frameIndex}, complete=${img.complete}, naturalWidth=${img.naturalWidth}`);
+                    return;
+                }
+                
+                // Clear canvas completely with transparency
+                this.catSpriteCtx.clearRect(0, 0, this.catSpriteCanvas.width, this.catSpriteCanvas.height);
+                
+                // Save context state
+                this.catSpriteCtx.save();
+                
+                try {
+                    // Draw the cat image centered with proper transparency
+                    this.catSpriteCtx.globalCompositeOperation = 'source-over';
+                    this.catSpriteCtx.drawImage(
+                        img,
+                        0, 0, img.naturalWidth, img.naturalHeight, // Source
+                        0, 0, this.catSpriteCanvas.width, this.catSpriteCanvas.height // Destination
+                    );
+                    
+                    console.log(`✅ Successfully drew cat frame: ${frameIndex} (${img.src.split('/').pop()}) - ${img.naturalWidth}x${img.naturalHeight}`);
+                } catch (error) {
+                    console.error(`❌ Error drawing cat frame ${frameIndex}:`, error);
+                }
+                
+                // Restore context state
+                this.catSpriteCtx.restore();
+                
+                // Force texture update
+                this.catSpriteTexture.needsUpdate = true;
+            }
+            
+            // Play the cat click animation: Firstcat.png → secondcat.png → Firstcat.png
+            playCatClickAnimation() {
+                if (this.catIsAnimating) {
+                    console.log('🚫 Cat animation already in progress, skipping');
+                    return;
+                }
+                
+                if (this.catImagesLoaded < 2) {
+                    console.log('🚫 Cat images not fully loaded yet, skipping animation');
+                    return;
+                }
+                
+                console.log('🎬 Starting cat click animation...');
+                this.catIsAnimating = true;
+                
+                // Animation sequence: 1 → 0 (2 frames total, 300ms)
+                const sequence = [1, 0];
+                let sequenceIndex = 0;
+                
+                const animateCatFrame = () => {
+                    if (sequenceIndex < sequence.length) {
+                        const frameIndex = sequence[sequenceIndex];
+                        console.log(`🎞️ Animating cat to frame ${frameIndex} (${this.catImageSequence[frameIndex]?.src})`);
+                        this.drawCatImageFrame(frameIndex);
+                        sequenceIndex++;
+                        
+                        // Continue animation after delay
+                        setTimeout(animateCatFrame, this.catAnimationSpeed);
+                    } else {
+                        // Animation complete
+                        this.catIsAnimating = false;
+                        console.log('✅ Cat click animation complete - back to frame 0');
+                    }
+                };
+                
+                // Start the animation immediately
+                animateCatFrame();
+            }
+
+            createPumpkid() {
+                // Create a 2D plane for pumpkid sprite animation
+                const pumpkidGeometry = new THREE.PlaneGeometry(7, 7); // Increased size by 1
+                
+                // Create high-resolution canvas for pumpkid sprite animation with transparency
+                this.pumpkidSpriteCanvas = document.createElement('canvas');
+                this.pumpkidSpriteCanvas.width = 2048;
+                this.pumpkidSpriteCanvas.height = 2048;
+                this.pumpkidSpriteCtx = this.pumpkidSpriteCanvas.getContext('2d');
+                
+                // Enable high-quality image rendering
+                this.pumpkidSpriteCtx.imageSmoothingEnabled = true;
+                this.pumpkidSpriteCtx.imageSmoothingQuality = 'high';
+                
+                // Enable transparency
+                this.pumpkidSpriteCtx.globalCompositeOperation = 'source-over';
+                
+                // Pumpkid animation properties for 2 frames
+                this.pumpkidCurrentFrame = 0;
+                this.pumpkidTotalFrames = 2;
+                this.pumpkidIsAnimating = false;
+                this.pumpkidAnimationSpeed = 150; // 150ms per frame
+                
+                // Load pumpkid image sequence
+                this.loadPumpkidImageSequence();
+                
+                // Create texture from canvas with transparency
+                this.pumpkidSpriteTexture = new THREE.CanvasTexture(this.pumpkidSpriteCanvas);
+                this.pumpkidSpriteTexture.needsUpdate = true;
+                
+                const pumpkidMaterial = new THREE.MeshBasicMaterial({ 
+                    map: this.pumpkidSpriteTexture,
+                    transparent: true,
+                    alphaTest: 0.1,
+                    side: THREE.DoubleSide
+                });
+                
+                this.pumpkidPlanet = new THREE.Mesh(pumpkidGeometry, pumpkidMaterial);
+                this.pumpkidPlanet.userData = { type: 'pumpkid' };
+                // Position to the right of the cat
+                this.pumpkidPlanet.position.set(-11.5, -2, -6);
+                this.scene.add(this.pumpkidPlanet);
+                
+                console.log('Created pumpkid plane with transparency at position (-7, 0, -5)');
+            }
+            
+            // Load pumpkid 2-frame sequence
+            loadPumpkidImageSequence() {
+                const pumpkidImagePaths = [
+                    'Assets/firstpumpkid.png',     // Frame 0 - Normal pumpkid
+                    'Assets/secondpumpkid.png'     // Frame 1 - Animation frame
+                ];
+                
+                console.log('Loading pumpkid image sequence:', pumpkidImagePaths);
+                
+                this.pumpkidImageSequence = [];
+                this.pumpkidTotalFrames = pumpkidImagePaths.length;
+                this.pumpkidCurrentFrame = 0;
+                this.pumpkidIsAnimating = false;
+                this.pumpkidImagesLoaded = 0;
+                
+                // Load all pumpkid images with error handling
+                pumpkidImagePaths.forEach((path, index) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log(`✓ Loaded pumpkid image ${index + 1}/${pumpkidImagePaths.length}: ${path} (${img.naturalWidth}x${img.naturalHeight})`);
+                        this.pumpkidImagesLoaded++;
+                        
+                        if (this.pumpkidImagesLoaded === pumpkidImagePaths.length) {
+                            console.log('🎉 All pumpkid images loaded! Showing firstpumpkid.png...');
+                            console.log('Pumpkid image sequence status:', this.pumpkidImageSequence.map((img, i) => `Frame ${i}: ${img.complete ? '✅' : '❌'} ${img.naturalWidth}x${img.naturalHeight}`));
+                            // Show the first frame (normal pumpkid)
+                            setTimeout(() => this.drawPumpkidImageFrame(0), 100);
+                        }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error(`❌ Failed to load pumpkid image: ${path}`, error);
+                        this.pumpkidImagesLoaded++;
+                    };
+                    
+                    this.pumpkidImageSequence[index] = img;
+                    img.src = path;
+                });
+            }
+            
+            // Draw pumpkid frame from image sequence with proper transparency
+            drawPumpkidImageFrame(frameIndex) {
+                if (!this.pumpkidImageSequence || !this.pumpkidImageSequence[frameIndex]) {
+                    console.error(`❌ Pumpkid image not ready: frameIndex=${frameIndex}`);
+                    return;
+                }
+                
+                const img = this.pumpkidImageSequence[frameIndex];
+                if (!img.complete || img.naturalWidth === 0) {
+                    console.error(`❌ Pumpkid image not fully loaded: frameIndex=${frameIndex}, complete=${img.complete}, naturalWidth=${img.naturalWidth}`);
+                    return;
+                }
+                
+                // Clear canvas completely with transparency
+                this.pumpkidSpriteCtx.clearRect(0, 0, this.pumpkidSpriteCanvas.width, this.pumpkidSpriteCanvas.height);
+                
+                // Save context state
+                this.pumpkidSpriteCtx.save();
+                
+                try {
+                    // Draw the pumpkid image centered with proper transparency
+                    this.pumpkidSpriteCtx.globalCompositeOperation = 'source-over';
+                    this.pumpkidSpriteCtx.drawImage(
+                        img,
+                        0, 0, img.naturalWidth, img.naturalHeight, // Source
+                        0, 0, this.pumpkidSpriteCanvas.width, this.pumpkidSpriteCanvas.height // Destination
+                    );
+                    
+                    console.log(`✅ Successfully drew pumpkid frame: ${frameIndex} (${img.src.split('/').pop()}) - ${img.naturalWidth}x${img.naturalHeight}`);
+                } catch (error) {
+                    console.error(`❌ Error drawing pumpkid frame ${frameIndex}:`, error);
+                }
+                
+                // Restore context state
+                this.pumpkidSpriteCtx.restore();
+                
+                // Force texture update
+                this.pumpkidSpriteTexture.needsUpdate = true;
+            }
+            
+            // Play the pumpkid click animation: firstpumpkid.png → secondpumpkid.png → firstpumpkid.png
+            playPumpkidClickAnimation() {
+                if (this.pumpkidIsAnimating) {
+                    console.log('🚫 Pumpkid animation already in progress, skipping');
+                    return;
+                }
+                
+                if (this.pumpkidImagesLoaded < 2) {
+                    console.log('🚫 Pumpkid images not fully loaded yet, skipping animation');
+                    return;
+                }
+                
+                console.log('🎬 Starting pumpkid click animation...');
+                this.pumpkidIsAnimating = true;
+                
+                // Animation sequence: 1 → 0 (2 frames total, 300ms)
+                const sequence = [1, 0];
+                let sequenceIndex = 0;
+                
+                const animatePumpkidFrame = () => {
+                    if (sequenceIndex < sequence.length) {
+                        const frameIndex = sequence[sequenceIndex];
+                        console.log(`🎞️ Animating pumpkid to frame ${frameIndex} (${this.pumpkidImageSequence[frameIndex]?.src})`);
+                        this.drawPumpkidImageFrame(frameIndex);
+                        sequenceIndex++;
+                        
+                        // Continue animation after delay
+                        setTimeout(animatePumpkidFrame, this.pumpkidAnimationSpeed);
+                    } else {
+                        // Animation complete
+                        this.pumpkidIsAnimating = false;
+                        console.log('✅ Pumpkid click animation complete - back to frame 0');
+                    }
+                };
+                
+                // Start the animation immediately
+                animatePumpkidFrame();
             }
 
             createScene() {
@@ -1365,6 +1727,11 @@
                     
                     if (clickedObject.userData.type === 'uranus' || clickedObject.parent?.userData.type === 'uranus') {
                         this.touchUranus(intersects[0].point);
+                    } else if (clickedObject.userData.type === 'cat' || clickedObject.parent?.userData.type === 'cat') {
+                        this.touchCat(intersects[0].point);
+                    } else if (clickedObject.userData.type === 'pumpkid' || clickedObject.parent?.userData.type === 'pumpkid') {
+                        // Pumpkid is not clickable - do nothing
+                        console.log('Pumpkid clicked but not interactive');
                     } else {
                         // Clicked on flying object
                         this.explodeObject(clickedObject, intersects[0].point);
@@ -1428,6 +1795,35 @@
                 
                 // Check for special events
                 this.checkEasterEggs();
+            }
+
+            touchCat(point) {
+                console.log('Cat clicked!');
+                
+                // Play slap sound instantly
+                this.playSlapSound();
+                
+                // Trigger cat animation
+                this.playCatClickAnimation();
+                
+                // Simultaneously trigger pumpkid animation
+                this.playPumpkidClickAnimation();
+            }
+
+            playSlapSound() {
+                if (this.isMuted) return;
+
+                try {
+                    // Play the slap sound
+                    if (this.slapAudio) {
+                        this.slapAudio.currentTime = 0; // Reset to beginning
+                        this.slapAudio.play().catch(error => {
+                            console.log('Slap audio play failed:', error);
+                        });
+                    }
+                } catch (error) {
+                    console.log('Slap audio playback failed:', error);
+                }
             }
 
             explodeObject(object, point) {
