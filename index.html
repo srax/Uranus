@@ -1182,7 +1182,7 @@
 
             createCat() {
                 // Create a 2D plane for cat sprite animation
-                const catGeometry = new THREE.PlaneGeometry(8, 8); // Made smaller by one
+                const catGeometry = new THREE.PlaneGeometry(7.5, 7.5); // Made smaller by 0.5
                 
                 // Create high-resolution canvas for cat sprite animation with transparency
                 this.catSpriteCanvas = document.createElement('canvas');
@@ -1220,7 +1220,7 @@
                 this.catPlanet = new THREE.Mesh(catGeometry, catMaterial);
                 this.catPlanet.userData = { type: 'cat' };
                 // Position to the left of the planet and further away
-                this.catPlanet.position.set(-20, -8, -5);
+                this.catPlanet.position.set(-20, -7.7, -5);
                 this.scene.add(this.catPlanet);
                 
                 console.log('Created cat plane with transparency at position (-15, 0, -5)');
@@ -1349,7 +1349,7 @@
 
             createPumpkid() {
                 // Create a 2D plane for pumpkid sprite animation
-                const pumpkidGeometry = new THREE.PlaneGeometry(8, 8); // Made smaller by one
+                const pumpkidGeometry = new THREE.PlaneGeometry(7.5, 7.5); // Made smaller by 0.5
                 
                 // Create high-resolution canvas for pumpkid sprite animation with transparency
                 this.pumpkidSpriteCanvas = document.createElement('canvas');
@@ -1387,7 +1387,7 @@
                 this.pumpkidPlanet = new THREE.Mesh(pumpkidGeometry, pumpkidMaterial);
                 this.pumpkidPlanet.userData = { type: 'pumpkid' };
                 // Position to the right of the cat
-                this.pumpkidPlanet.position.set(-16.8, -10, -6);
+                this.pumpkidPlanet.position.set(-16.3, -10.1, -6);
                 this.scene.add(this.pumpkidPlanet);
                 
                 console.log('Created pumpkid plane with transparency at position (-7, 0, -5)');
