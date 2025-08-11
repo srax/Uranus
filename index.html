@@ -628,6 +628,26 @@
                 this.pumpkidIsAnimating = false;
                 this.pumpkidImagesLoaded = 0;
                 
+                // Ass animation properties
+                this.assPlanet = null;
+                this.assSpriteCanvas = null;
+                this.assSpriteCtx = null;
+                this.assSpriteTexture = null;
+                this.assImageSequence = [];
+                this.assCurrentFrame = 0;
+                this.assIsAnimating = false;
+                this.assImagesLoaded = 0;
+                
+                // Fire animation properties
+                this.firePlanet = null;
+                this.fireSpriteCanvas = null;
+                this.fireSpriteCtx = null;
+                this.fireSpriteTexture = null;
+                this.fireImageSequence = [];
+                this.fireCurrentFrame = 0;
+                this.fireIsAnimating = false;
+                this.fireImagesLoaded = 0;
+                
                 // Global leaderboard properties
                 this.userCountry = null;
                 this.userCountryCode = null;
@@ -684,6 +704,8 @@
                 this.createUranus();
                 this.createCat();
                 this.createPumpkid();
+                this.createAss();
+                this.createFire();
                 this.createStarfield();
                 this.createFlyingObjects();
                 this.setupEventListeners();
@@ -695,8 +717,11 @@
                 await this.detectUserLocation();
                 this.setupLeaderboardListener();
                 
-                // Spawn flying objects periodically
-                setInterval(() => this.spawnFlyingObject(), 2000);
+                // Spawn flying objects more frequently
+                setInterval(() => this.spawnFlyingObject(), 1000); // Further reduced to 1000ms
+                // Also spawn horizontal objects from both directions
+                setInterval(() => this.spawnHorizontalObject(), 2500); // Left to right
+                setInterval(() => this.spawnHorizontalObjectReverse(), 3000); // Right to left
             }
 
             async initFirebase() {
@@ -1002,6 +1027,10 @@
                 // Load the slap sound for cat
                 this.slapAudio = new Audio('sound_effects/11L-Loud_slap_sound-1754727690182.mp3');
                 this.slapAudio.preload = 'auto';
+                
+                // Load explosion sound for flying objects (you can replace this path)
+                this.explosionAudio = new Audio('sound_effects/explosion.mp3');
+                this.explosionAudio.preload = 'auto';
             }
 
             createUranus() {
@@ -1514,6 +1543,343 @@
                 animatePumpkidFrame();
             }
 
+            createAss() {
+                // Create a 2D plane for ass sprite animation
+                const assGeometry = new THREE.PlaneGeometry(7.5, 7.5); // Same size as others
+                
+                // Create high-resolution canvas for ass sprite animation with transparency
+                this.assSpriteCanvas = document.createElement('canvas');
+                this.assSpriteCanvas.width = 2048;
+                this.assSpriteCanvas.height = 2048;
+                this.assSpriteCtx = this.assSpriteCanvas.getContext('2d');
+                
+                // Enable high-quality image rendering
+                this.assSpriteCtx.imageSmoothingEnabled = true;
+                this.assSpriteCtx.imageSmoothingQuality = 'high';
+                
+                // Enable transparency
+                this.assSpriteCtx.globalCompositeOperation = 'source-over';
+                
+                // Ass animation properties for 5 frames
+                this.assCurrentFrame = 0;
+                this.assTotalFrames = 5;
+                this.assIsAnimating = false;
+                this.assAnimationSpeed = 150; // 150ms per frame
+                
+                // Load ass image sequence
+                this.loadAssImageSequence();
+                
+                // Create texture from canvas with transparency
+                this.assSpriteTexture = new THREE.CanvasTexture(this.assSpriteCanvas);
+                this.assSpriteTexture.needsUpdate = true;
+                
+                const assMaterial = new THREE.MeshBasicMaterial({ 
+                    map: this.assSpriteTexture,
+                    transparent: true,
+                    alphaTest: 0.1,
+                    side: THREE.DoubleSide
+                });
+                
+                this.assPlanet = new THREE.Mesh(assGeometry, assMaterial);
+                this.assPlanet.userData = { type: 'ass' };
+                // Position on the right side, lower
+                this.assPlanet.position.set(15, -3, -5);
+                this.scene.add(this.assPlanet);
+                
+                console.log('Created ass plane with transparency at position (15, -3, -5)');
+            }
+            
+            // Load ass 5-frame sequence
+            loadAssImageSequence() {
+                const assImagePaths = [
+                    'Assets/Ass1.png',     // Frame 0
+                    'Assets/Ass2.png',     // Frame 1
+                    'Assets/Ass3.png',     // Frame 2
+                    'Assets/Ass4.png',     // Frame 3
+                    'Assets/Ass5.png'      // Frame 4
+                ];
+                
+                console.log('Loading ass image sequence:', assImagePaths);
+                
+                this.assImageSequence = [];
+                this.assTotalFrames = assImagePaths.length;
+                this.assCurrentFrame = 0;
+                this.assIsAnimating = false;
+                this.assImagesLoaded = 0;
+                
+                // Load all ass images with error handling
+                assImagePaths.forEach((path, index) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log(`✓ Loaded ass image ${index + 1}/${assImagePaths.length}: ${path} (${img.naturalWidth}x${img.naturalHeight})`);
+                        this.assImagesLoaded++;
+                        
+                        if (this.assImagesLoaded === assImagePaths.length) {
+                            console.log('🎉 All ass images loaded! Showing Ass1.png...');
+                            // Show the first frame (normal ass)
+                            setTimeout(() => this.drawAssImageFrame(0), 100);
+                        }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error(`❌ Failed to load ass image: ${path}`, error);
+                        this.assImagesLoaded++;
+                    };
+                    
+                    this.assImageSequence[index] = img;
+                    img.src = path;
+                });
+            }
+            
+            // Draw ass frame from image sequence with proper transparency
+            drawAssImageFrame(frameIndex) {
+                if (!this.assImageSequence || !this.assImageSequence[frameIndex]) {
+                    console.error(`❌ Ass image not ready: frameIndex=${frameIndex}`);
+                    return;
+                }
+                
+                const img = this.assImageSequence[frameIndex];
+                if (!img.complete || img.naturalWidth === 0) {
+                    console.error(`❌ Ass image not fully loaded: frameIndex=${frameIndex}`);
+                    return;
+                }
+                
+                // Clear canvas completely with transparency
+                this.assSpriteCtx.clearRect(0, 0, this.assSpriteCanvas.width, this.assSpriteCanvas.height);
+                
+                // Save context state
+                this.assSpriteCtx.save();
+                
+                try {
+                    // Draw the ass image centered with proper transparency
+                    this.assSpriteCtx.globalCompositeOperation = 'source-over';
+                    this.assSpriteCtx.drawImage(
+                        img,
+                        0, 0, img.naturalWidth, img.naturalHeight, // Source
+                        0, 0, this.assSpriteCanvas.width, this.assSpriteCanvas.height // Destination
+                    );
+                    
+                    console.log(`✅ Successfully drew ass frame: ${frameIndex} (${img.src.split('/').pop()})`);
+                } catch (error) {
+                    console.error(`❌ Error drawing ass frame ${frameIndex}:`, error);
+                }
+                
+                // Restore context state
+                this.assSpriteCtx.restore();
+                
+                // Force texture update
+                this.assSpriteTexture.needsUpdate = true;
+            }
+            
+            // Play the ass animation: Ass1 → Ass2 → Ass3 → Ass4 → Ass5 → Ass1
+            playAssAnimation() {
+                if (this.assIsAnimating) {
+                    console.log('🚫 Ass animation already in progress, skipping');
+                    return;
+                }
+                
+                if (this.assImagesLoaded < 5) {
+                    console.log('🚫 Ass images not fully loaded yet, skipping animation');
+                    return;
+                }
+                
+                console.log('🎬 Starting ass animation...');
+                this.assIsAnimating = true;
+                
+                // Animation sequence: 1 → 2 → 3 → 4 → 0 (5 frames total)
+                const sequence = [1, 2, 3, 4, 0];
+                let sequenceIndex = 0;
+                
+                const animateAssFrame = () => {
+                    if (sequenceIndex < sequence.length) {
+                        const frameIndex = sequence[sequenceIndex];
+                        console.log(`🎞️ Animating ass to frame ${frameIndex}`);
+                        this.drawAssImageFrame(frameIndex);
+                        sequenceIndex++;
+                        
+                        // Continue animation after delay
+                        setTimeout(animateAssFrame, this.assAnimationSpeed);
+                    } else {
+                        // Animation complete
+                        this.assIsAnimating = false;
+                        console.log('✅ Ass animation complete - back to frame 0');
+                    }
+                };
+                
+                // Start the animation immediately
+                animateAssFrame();
+            }
+
+            createFire() {
+                // Create a 2D plane for fire sprite animation
+                const fireGeometry = new THREE.PlaneGeometry(7.5, 7.5); // Same size as others
+                
+                // Create high-resolution canvas for fire sprite animation with transparency
+                this.fireSpriteCanvas = document.createElement('canvas');
+                this.fireSpriteCanvas.width = 2048;
+                this.fireSpriteCanvas.height = 2048;
+                this.fireSpriteCtx = this.fireSpriteCanvas.getContext('2d');
+                
+                // Enable high-quality image rendering
+                this.fireSpriteCtx.imageSmoothingEnabled = true;
+                this.fireSpriteCtx.imageSmoothingQuality = 'high';
+                
+                // Enable transparency
+                this.fireSpriteCtx.globalCompositeOperation = 'source-over';
+                
+                // Fire animation properties for 4 frames
+                this.fireCurrentFrame = 0;
+                this.fireTotalFrames = 4;
+                this.fireIsAnimating = false;
+                this.fireAnimationSpeed = 150; // 150ms per frame
+                
+                // Load fire image sequence
+                this.loadFireImageSequence();
+                
+                // Create texture from canvas with transparency
+                this.fireSpriteTexture = new THREE.CanvasTexture(this.fireSpriteCanvas);
+                this.fireSpriteTexture.needsUpdate = true;
+                
+                const fireMaterial = new THREE.MeshBasicMaterial({ 
+                    map: this.fireSpriteTexture,
+                    transparent: true,
+                    alphaTest: 0.1,
+                    side: THREE.DoubleSide
+                });
+                
+                this.firePlanet = new THREE.Mesh(fireGeometry, fireMaterial);
+                this.firePlanet.userData = { type: 'fire' };
+                // Position on the right side, higher
+                this.firePlanet.position.set(15, 3, -5);
+                this.scene.add(this.firePlanet);
+                
+                console.log('Created fire plane with transparency at position (15, 3, -5)');
+            }
+            
+            // Load fire 4-frame sequence
+            loadFireImageSequence() {
+                const fireImagePaths = [
+                    'Assets/fire1.png',     // Frame 0
+                    'Assets/fire2.png',     // Frame 1
+                    'Assets/fire3.png',     // Frame 2
+                    'Assets/fire4.png'      // Frame 3
+                ];
+                
+                console.log('Loading fire image sequence:', fireImagePaths);
+                
+                this.fireImageSequence = [];
+                this.fireTotalFrames = fireImagePaths.length;
+                this.fireCurrentFrame = 0;
+                this.fireIsAnimating = false;
+                this.fireImagesLoaded = 0;
+                
+                // Load all fire images with error handling
+                fireImagePaths.forEach((path, index) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log(`✓ Loaded fire image ${index + 1}/${fireImagePaths.length}: ${path} (${img.naturalWidth}x${img.naturalHeight})`);
+                        this.fireImagesLoaded++;
+                        
+                        if (this.fireImagesLoaded === fireImagePaths.length) {
+                            console.log('🎉 All fire images loaded! Showing fire1.png...');
+                            // Show the first frame (normal fire)
+                            setTimeout(() => this.drawFireImageFrame(0), 100);
+                        }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error(`❌ Failed to load fire image: ${path}`, error);
+                        this.fireImagesLoaded++;
+                    };
+                    
+                    this.fireImageSequence[index] = img;
+                    img.src = path;
+                });
+            }
+            
+            // Draw fire frame from image sequence with proper transparency
+            drawFireImageFrame(frameIndex) {
+                if (!this.fireImageSequence || !this.fireImageSequence[frameIndex]) {
+                    console.error(`❌ Fire image not ready: frameIndex=${frameIndex}`);
+                    return;
+                }
+                
+                const img = this.fireImageSequence[frameIndex];
+                if (!img.complete || img.naturalWidth === 0) {
+                    console.error(`❌ Fire image not fully loaded: frameIndex=${frameIndex}`);
+                    return;
+                }
+                
+                // Clear canvas completely with transparency
+                this.fireSpriteCtx.clearRect(0, 0, this.fireSpriteCanvas.width, this.fireSpriteCanvas.height);
+                
+                // Save context state
+                this.fireSpriteCtx.save();
+                
+                try {
+                    // Draw the fire image centered with proper transparency
+                    this.fireSpriteCtx.globalCompositeOperation = 'source-over';
+                    this.fireSpriteCtx.drawImage(
+                        img,
+                        0, 0, img.naturalWidth, img.naturalHeight, // Source
+                        0, 0, this.fireSpriteCanvas.width, this.fireSpriteCanvas.height // Destination
+                    );
+                    
+                    console.log(`✅ Successfully drew fire frame: ${frameIndex} (${img.src.split('/').pop()})`);
+                } catch (error) {
+                    console.error(`❌ Error drawing fire frame ${frameIndex}:`, error);
+                }
+                
+                // Restore context state
+                this.fireSpriteCtx.restore();
+                
+                // Force texture update
+                this.fireSpriteTexture.needsUpdate = true;
+            }
+            
+            // Play the fire animation: fire1 → fire2 → fire3 → fire4 → fire1
+            playFireAnimation() {
+                if (this.fireIsAnimating) {
+                    console.log('🚫 Fire animation already in progress, skipping');
+                    return;
+                }
+                
+                if (this.fireImagesLoaded < 4) {
+                    console.log('🚫 Fire images not fully loaded yet, skipping animation');
+                    return;
+                }
+                
+                console.log('🎬 Starting fire animation...');
+                this.fireIsAnimating = true;
+                
+                // Animation sequence: 1 → 2 → 3 → 0 (4 frames total)
+                const sequence = [1, 2, 3, 0];
+                let sequenceIndex = 0;
+                
+                const animateFireFrame = () => {
+                    if (sequenceIndex < sequence.length) {
+                        const frameIndex = sequence[sequenceIndex];
+                        console.log(`🎞️ Animating fire to frame ${frameIndex}`);
+                        this.drawFireImageFrame(frameIndex);
+                        sequenceIndex++;
+                        
+                        // Continue animation after delay
+                        setTimeout(animateFireFrame, this.fireAnimationSpeed);
+                    } else {
+                        // Animation complete
+                        this.fireIsAnimating = false;
+                        console.log('✅ Fire animation complete - back to frame 0');
+                    }
+                };
+                
+                // Start the animation immediately
+                animateFireFrame();
+            }
+
             createScene() {
                 this.scene = new THREE.Scene();
                 this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
@@ -1560,18 +1926,19 @@
                 });
                 
                 const stars = new THREE.Points(starGeometry, starMaterial);
+                stars.userData = { type: 'starfield', nonInteractive: true }; // Mark as non-clickable
                 this.scene.add(stars);
             }
 
             createFlyingObjects() {
-                // Pre-create some flying objects
-                for (let i = 0; i < 5; i++) {
-                    setTimeout(() => this.spawnFlyingObject(), i * 1000);
+                // Pre-create more flying objects
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => this.spawnFlyingObject(), i * 800);
                 }
             }
 
             spawnFlyingObject() {
-                const types = ['rocket', 'ufo', 'asteroid', 'satellite'];
+                const types = ['rocket', 'ufo', 'asteroid', 'satellite', 'comet', 'debris', 'probe', 'meteor', 'astronaut', 'spiral_debris'];
                 const type = types[Math.floor(Math.random() * types.length)];
                 
                 let geometry, material, mesh;
@@ -1598,28 +1965,119 @@
                         material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
                         mesh = new THREE.Mesh(geometry, material);
                         break;
+                    case 'comet':
+                        geometry = new THREE.SphereGeometry(0.3, 8, 6);
+                        material = new THREE.MeshPhongMaterial({ color: 0x00aaff, transparent: true, opacity: 0.8 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'debris':
+                        geometry = new THREE.OctahedronGeometry(0.4);
+                        material = new THREE.MeshPhongMaterial({ color: 0x664422 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'probe':
+                        geometry = new THREE.CylinderGeometry(0.2, 0.3, 0.8, 6);
+                        material = new THREE.MeshPhongMaterial({ color: 0xff6600 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'meteor':
+                        geometry = new THREE.IcosahedronGeometry(0.6);
+                        material = new THREE.MeshPhongMaterial({ color: 0xaa4444, roughness: 0.8 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'astronaut':
+                        // Create a simple astronaut shape (head + body)
+                        const astronautGroup = new THREE.Group();
+                        // Head
+                        const headGeometry = new THREE.SphereGeometry(0.2, 8, 6);
+                        const headMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+                        const head = new THREE.Mesh(headGeometry, headMaterial);
+                        head.position.y = 0.3;
+                        astronautGroup.add(head);
+                        // Body
+                        const bodyGeometry = new THREE.CylinderGeometry(0.15, 0.2, 0.6, 8);
+                        const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+                        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                        astronautGroup.add(body);
+                        mesh = astronautGroup;
+                        break;
+                    case 'spiral_debris':
+                        // Create a big red debris with jagged edges
+                        geometry = new THREE.IcosahedronGeometry(1.2); // Much bigger
+                        material = new THREE.MeshPhongMaterial({ 
+                            color: 0xcc2222, // Strong red
+                            roughness: 0.9,
+                            metalness: 0.1
+                        });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
                 }
                 
-                // Random starting position
-                mesh.position.set(
-                    (Math.random() - 0.5) * 40,
-                    (Math.random() - 0.5) * 40,
-                    -50
-                );
-                
-                mesh.userData = { 
-                    type: type,
-                    velocity: new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.1,
-                        (Math.random() - 0.5) * 0.1,
-                        Math.random() * 0.2 + 0.1
-                    ),
-                    rotation: new THREE.Vector3(
-                        Math.random() * 0.02,
-                        Math.random() * 0.02,
-                        Math.random() * 0.02
-                    )
-                };
+                // Set position and movement based on type
+                if (type === 'spiral_debris') {
+                    // Big red debris moves slower and spirals
+                    mesh.position.set(
+                        (Math.random() - 0.5) * 35,
+                        (Math.random() - 0.5) * 35,
+                        -70 // Start even further back
+                    );
+                    mesh.userData = { 
+                        type: type,
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.03, // Very slow horizontal movement
+                            (Math.random() - 0.5) * 0.03,
+                            Math.random() * 0.06 + 0.03   // Very slow forward movement
+                        ),
+                        rotation: new THREE.Vector3(
+                            Math.random() * 0.008,
+                            Math.random() * 0.008,
+                            Math.random() * 0.008
+                        ),
+                        spiralTime: 0, // For spiral movement
+                        spiralRadius: Math.random() * 3 + 2, // Bigger spiral
+                        spiralSpeed: 0.02 // Slower spiral
+                    };
+                } else if (type === 'astronaut') {
+                    // Astronaut moves normally now (no spiral)
+                    mesh.position.set(
+                        (Math.random() - 0.5) * 30,
+                        (Math.random() - 0.5) * 30,
+                        -60
+                    );
+                    mesh.userData = { 
+                        type: type,
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.05, // Slower horizontal movement
+                            (Math.random() - 0.5) * 0.05,
+                            Math.random() * 0.08 + 0.04   // Slower forward movement
+                        ),
+                        rotation: new THREE.Vector3(
+                            Math.random() * 0.01,
+                            Math.random() * 0.01,
+                            Math.random() * 0.01
+                        )
+                    };
+                } else {
+                    // Regular objects
+                    mesh.position.set(
+                        (Math.random() - 0.5) * 40,
+                        (Math.random() - 0.5) * 40,
+                        -50
+                    );
+                    mesh.userData = { 
+                        type: type,
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.1,
+                            (Math.random() - 0.5) * 0.1,
+                            Math.random() * 0.2 + 0.1
+                        ),
+                        rotation: new THREE.Vector3(
+                            Math.random() * 0.02,
+                            Math.random() * 0.02,
+                            Math.random() * 0.02
+                        )
+                    };
+                }
                 
                 this.scene.add(mesh);
                 this.flyingObjects.push(mesh);
@@ -1632,6 +2090,141 @@
                         this.flyingObjects.splice(index, 1);
                     }
                 }, 30000);
+            }
+
+            spawnHorizontalObject() {
+                const types = ['rocket', 'ufo', 'satellite', 'debris'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                let geometry, material, mesh;
+                
+                switch (type) {
+                    case 'rocket':
+                        geometry = new THREE.ConeGeometry(0.2, 1, 8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'ufo':
+                        geometry = new THREE.SphereGeometry(0.5, 16, 8);
+                        geometry.scale(1, 0.3, 1);
+                        material = new THREE.MeshPhongMaterial({ color: 0x44ff44 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'satellite':
+                        geometry = new THREE.BoxGeometry(0.3, 0.3, 0.8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'debris':
+                        geometry = new THREE.OctahedronGeometry(0.4);
+                        material = new THREE.MeshPhongMaterial({ color: 0x664422 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                }
+                
+                // Start from left-back, move to right-front
+                mesh.position.set(
+                    -40, // Far left
+                    (Math.random() - 0.5) * 20, // Random height
+                    -30  // Back
+                );
+                
+                mesh.userData = { 
+                    type: type,
+                    velocity: new THREE.Vector3(
+                        Math.random() * 0.3 + 0.2, // Move right
+                        (Math.random() - 0.5) * 0.05, // Slight vertical movement
+                        Math.random() * 0.1 + 0.1   // Move toward camera
+                    ),
+                    rotation: new THREE.Vector3(
+                        Math.random() * 0.02,
+                        Math.random() * 0.02,
+                        Math.random() * 0.02
+                    ),
+                    isHorizontal: true // Mark as horizontal object
+                };
+                
+                this.scene.add(mesh);
+                this.flyingObjects.push(mesh);
+                
+                // Remove after it's far away
+                setTimeout(() => {
+                    this.scene.remove(mesh);
+                    const index = this.flyingObjects.indexOf(mesh);
+                    if (index > -1) {
+                        this.flyingObjects.splice(index, 1);
+                    }
+                }, 15000); // 15 seconds for horizontal objects
+            }
+
+            spawnHorizontalObjectReverse() {
+                const types = ['rocket', 'ufo', 'satellite', 'debris', 'comet'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                let geometry, material, mesh;
+                
+                switch (type) {
+                    case 'rocket':
+                        geometry = new THREE.ConeGeometry(0.2, 1, 8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'ufo':
+                        geometry = new THREE.SphereGeometry(0.5, 16, 8);
+                        geometry.scale(1, 0.3, 1);
+                        material = new THREE.MeshPhongMaterial({ color: 0x44ff44 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'satellite':
+                        geometry = new THREE.BoxGeometry(0.3, 0.3, 0.8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'debris':
+                        geometry = new THREE.OctahedronGeometry(0.4);
+                        material = new THREE.MeshPhongMaterial({ color: 0x664422 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                    case 'comet':
+                        geometry = new THREE.SphereGeometry(0.3, 8, 6);
+                        material = new THREE.MeshPhongMaterial({ color: 0x00aaff, transparent: true, opacity: 0.8 });
+                        mesh = new THREE.Mesh(geometry, material);
+                        break;
+                }
+                
+                // Start from right-back, move to left-front
+                mesh.position.set(
+                    40, // Far right
+                    (Math.random() - 0.5) * 20, // Random height
+                    -30  // Back
+                );
+                
+                mesh.userData = { 
+                    type: type,
+                    velocity: new THREE.Vector3(
+                        -(Math.random() * 0.3 + 0.2), // Move left (negative)
+                        (Math.random() - 0.5) * 0.05, // Slight vertical movement
+                        Math.random() * 0.1 + 0.1   // Move toward camera
+                    ),
+                    rotation: new THREE.Vector3(
+                        Math.random() * 0.02,
+                        Math.random() * 0.02,
+                        Math.random() * 0.02
+                    ),
+                    isHorizontalReverse: true // Mark as reverse horizontal object
+                };
+                
+                this.scene.add(mesh);
+                this.flyingObjects.push(mesh);
+                
+                // Remove after it's far away
+                setTimeout(() => {
+                    this.scene.remove(mesh);
+                    const index = this.flyingObjects.indexOf(mesh);
+                    if (index > -1) {
+                        this.flyingObjects.splice(index, 1);
+                    }
+                }, 15000); // 15 seconds for horizontal objects
             }
 
             createFartParticles(position) {
@@ -1735,8 +2328,12 @@
                     } else if (clickedObject.userData.type === 'pumpkid' || clickedObject.parent?.userData.type === 'pumpkid') {
                         // Pumpkid is not clickable - do nothing
                         console.log('Pumpkid clicked but not interactive');
-                    } else {
-                        // Clicked on flying object
+                    } else if (clickedObject.userData.type === 'ass' || clickedObject.parent?.userData.type === 'ass') {
+                        this.touchAss(intersects[0].point);
+                    } else if (clickedObject.userData.type === 'fire' || clickedObject.parent?.userData.type === 'fire') {
+                        this.touchFire(intersects[0].point);
+                    } else if (!clickedObject.userData.nonInteractive) {
+                        // Clicked on flying object (but not stars or other non-interactive objects)
                         this.explodeObject(clickedObject, intersects[0].point);
                     }
                 }
@@ -1809,8 +2406,28 @@
                 // Trigger cat animation
                 this.playCatClickAnimation();
                 
-                // Simultaneously trigger pumpkid animation
+                // Simultaneously trigger pumpkid animation (only pumpkid moves with cat)
                 this.playPumpkidClickAnimation();
+            }
+
+            touchAss(point) {
+                console.log('Ass clicked!');
+                
+                // Play slap sound instantly
+                this.playSlapSound();
+                
+                // Trigger ass animation only
+                this.playAssAnimation();
+            }
+
+            touchFire(point) {
+                console.log('Fire clicked!');
+                
+                // Play slap sound instantly
+                this.playSlapSound();
+                
+                // Trigger fire animation only
+                this.playFireAnimation();
             }
 
             playSlapSound() {
@@ -1837,15 +2454,80 @@
                     this.flyingObjects.splice(index, 1);
                 }
                 
-                // Create explosion particles
+                // Create explosion (PNG or particles)
                 this.createExplosion(point);
                 this.playExplosionSound();
+                
+                // Play custom explosion sound if available
+                this.playCustomExplosionSound();
                 
                 // Show emoji explosion
                 this.showEmojiExplosion(['💥', '⭐', '✨', '🔥'][Math.floor(Math.random() * 4)]);
             }
 
             createExplosion(position) {
+                // Create PNG explosion instead of particles
+                // First create a plane for the explosion image
+                const explosionGeometry = new THREE.PlaneGeometry(3, 3);
+                
+                // Try to load explosion PNG, fallback to particles if not found
+                const explosionTexture = new THREE.TextureLoader().load(
+                    'Assets/explosion.png', // You'll add this PNG file
+                    // On successful load
+                    (texture) => {
+                        console.log('Explosion PNG loaded successfully');
+                    },
+                    // On progress
+                    undefined,
+                    // On error - fallback to particle explosion
+                    (error) => {
+                        console.log('Explosion PNG not found, using particle explosion');
+                        this.createParticleExplosion(position);
+                        return;
+                    }
+                );
+                
+                const explosionMaterial = new THREE.MeshBasicMaterial({
+                    map: explosionTexture,
+                    transparent: true,
+                    alphaTest: 0.1
+                });
+                
+                const explosionMesh = new THREE.Mesh(explosionGeometry, explosionMaterial);
+                explosionMesh.position.copy(position);
+                
+                // Make it face the camera
+                explosionMesh.lookAt(this.camera.position);
+                
+                // Add to scene
+                this.scene.add(explosionMesh);
+                
+                // Animate the explosion (scale up then fade out)
+                explosionMesh.scale.set(0.1, 0.1, 0.1);
+                
+                const animateExplosion = () => {
+                    const scale = explosionMesh.scale.x;
+                    const opacity = explosionMaterial.opacity;
+                    
+                    if (scale < 1) {
+                        // Scale up
+                        explosionMesh.scale.multiplyScalar(1.1);
+                        requestAnimationFrame(animateExplosion);
+                    } else if (opacity > 0) {
+                        // Fade out
+                        explosionMaterial.opacity -= 0.05;
+                        requestAnimationFrame(animateExplosion);
+                    } else {
+                        // Remove
+                        this.scene.remove(explosionMesh);
+                    }
+                };
+                
+                requestAnimationFrame(animateExplosion);
+            }
+            
+            createParticleExplosion(position) {
+                // Fallback particle explosion
                 const particleCount = 30;
                 const geometry = new THREE.BufferGeometry();
                 const positions = [];
@@ -2013,6 +2695,22 @@
                 oscillator.start();
                 oscillator.stop(this.audioContext.currentTime + 0.2);
             }
+            
+            playCustomExplosionSound() {
+                if (this.isMuted) return;
+                
+                try {
+                    // Play custom explosion sound if available
+                    if (this.explosionAudio && this.explosionAudio.readyState >= 2) {
+                        this.explosionAudio.currentTime = 0;
+                        this.explosionAudio.play().catch(error => {
+                            console.log('Custom explosion audio play failed:', error);
+                        });
+                    }
+                } catch (error) {
+                    console.log('Custom explosion audio playback failed:', error);
+                }
+            }
 
             playSpecialSound() {
                 if (this.isMuted || !this.audioContext) return;
@@ -2081,10 +2779,23 @@
                 
                 // Update flying objects
                 for (const obj of this.flyingObjects) {
-                    obj.position.add(obj.userData.velocity);
-                    obj.rotation.x += obj.userData.rotation.x;
-                    obj.rotation.y += obj.userData.rotation.y;
-                    obj.rotation.z += obj.userData.rotation.z;
+                    if (obj.userData.type === 'spiral_debris') {
+                        // Special slow spiral movement for big red debris
+                        obj.userData.spiralTime += obj.userData.spiralSpeed; // Slower spiral
+                        obj.position.x += Math.sin(obj.userData.spiralTime) * 0.08;
+                        obj.position.y += Math.cos(obj.userData.spiralTime) * 0.08;
+                        obj.position.z += obj.userData.velocity.z;
+                        // Slow menacing rotation
+                        obj.rotation.x += 0.015;
+                        obj.rotation.y += 0.010;
+                        obj.rotation.z += 0.008;
+                    } else {
+                        // Regular movement for other objects (including astronaut)
+                        obj.position.add(obj.userData.velocity);
+                        obj.rotation.x += obj.userData.rotation.x;
+                        obj.rotation.y += obj.userData.rotation.y;
+                        obj.rotation.z += obj.userData.rotation.z;
+                    }
                 }
                 
                 // Update particles
