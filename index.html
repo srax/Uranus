@@ -1028,6 +1028,14 @@
                 this.slapAudio = new Audio('sound_effects/11L-Loud_slap_sound-1754727690182.mp3');
                 this.slapAudio.preload = 'auto';
                 
+                // Load the ass burning sound
+                this.assBurningAudio = new Audio('sound_effects/Assburning.mp3');
+                this.assBurningAudio.preload = 'auto';
+                
+                // Load the fire/asteroid burning sound
+                this.fireBurningAudio = new Audio('sound_effects/11L-Asteroid_burning,_fl-1754880555898.mp3');
+                this.fireBurningAudio.preload = 'auto';
+                
                 // Load explosion sound for flying objects (you can replace this path)
                 this.explosionAudio = new Audio('sound_effects/explosion.mp3');
                 this.explosionAudio.preload = 'auto';
@@ -1230,7 +1238,7 @@
                 this.catCurrentFrame = 0;
                 this.catTotalFrames = 2;
                 this.catIsAnimating = false;
-                this.catAnimationSpeed = 150; // 150ms per frame
+                this.catAnimationSpeed = 100; // Same as planet speed
                 
                 // Load cat image sequence
                 this.loadCatImageSequence();
@@ -1397,7 +1405,7 @@
                 this.pumpkidCurrentFrame = 0;
                 this.pumpkidTotalFrames = 2;
                 this.pumpkidIsAnimating = false;
-                this.pumpkidAnimationSpeed = 150; // 150ms per frame
+                this.pumpkidAnimationSpeed = 100; // Same as planet speed
                 
                 // Load pumpkid image sequence
                 this.loadPumpkidImageSequence();
@@ -1545,7 +1553,7 @@
 
             createAss() {
                 // Create a 2D plane for ass sprite animation
-                const assGeometry = new THREE.PlaneGeometry(7.5, 7.5); // Same size as others
+                const assGeometry = new THREE.PlaneGeometry(8.5, 8.5); // Made bigger by 1
                 
                 // Create high-resolution canvas for ass sprite animation with transparency
                 this.assSpriteCanvas = document.createElement('canvas');
@@ -1564,7 +1572,7 @@
                 this.assCurrentFrame = 0;
                 this.assTotalFrames = 5;
                 this.assIsAnimating = false;
-                this.assAnimationSpeed = 150; // 150ms per frame
+                this.assAnimationSpeed = 100; // Same as planet speed
                 
                 // Load ass image sequence
                 this.loadAssImageSequence();
@@ -1583,7 +1591,9 @@
                 this.assPlanet = new THREE.Mesh(assGeometry, assMaterial);
                 this.assPlanet.userData = { type: 'ass' };
                 // Position on the right side, lower
-                this.assPlanet.position.set(15, -3, -5);
+                this.assPlanet.position.set(-9, 6, -3);
+                // Flip horizontally to face right
+                this.assPlanet.scale.x = -1;
                 this.scene.add(this.assPlanet);
                 
                 console.log('Created ass plane with transparency at position (15, -3, -5)');
@@ -1714,7 +1724,7 @@
 
             createFire() {
                 // Create a 2D plane for fire sprite animation
-                const fireGeometry = new THREE.PlaneGeometry(7.5, 7.5); // Same size as others
+                const fireGeometry = new THREE.PlaneGeometry(6.5, 6.5); // Made smaller by 1
                 
                 // Create high-resolution canvas for fire sprite animation with transparency
                 this.fireSpriteCanvas = document.createElement('canvas');
@@ -1733,7 +1743,7 @@
                 this.fireCurrentFrame = 0;
                 this.fireTotalFrames = 4;
                 this.fireIsAnimating = false;
-                this.fireAnimationSpeed = 150; // 150ms per frame
+                this.fireAnimationSpeed = 100; // Same as planet speed
                 
                 // Load fire image sequence
                 this.loadFireImageSequence();
@@ -1752,7 +1762,7 @@
                 this.firePlanet = new THREE.Mesh(fireGeometry, fireMaterial);
                 this.firePlanet.userData = { type: 'fire' };
                 // Position on the right side, higher
-                this.firePlanet.position.set(15, 3, -5);
+                this.firePlanet.position.set(11, 7, -6.5);
                 this.scene.add(this.firePlanet);
                 
                 console.log('Created fire plane with transparency at position (15, 3, -5)');
@@ -2413,8 +2423,8 @@
             touchAss(point) {
                 console.log('Ass clicked!');
                 
-                // Play slap sound instantly
-                this.playSlapSound();
+                // Play ass burning sound instantly
+                this.playAssBurningSound();
                 
                 // Trigger ass animation only
                 this.playAssAnimation();
@@ -2423,8 +2433,8 @@
             touchFire(point) {
                 console.log('Fire clicked!');
                 
-                // Play slap sound instantly
-                this.playSlapSound();
+                // Play fire burning sound instantly
+                this.playFireBurningSound();
                 
                 // Trigger fire animation only
                 this.playFireAnimation();
@@ -2443,6 +2453,38 @@
                     }
                 } catch (error) {
                     console.log('Slap audio playback failed:', error);
+                }
+            }
+
+            playAssBurningSound() {
+                if (this.isMuted) return;
+
+                try {
+                    // Play the ass burning sound
+                    if (this.assBurningAudio) {
+                        this.assBurningAudio.currentTime = 0; // Reset to beginning
+                        this.assBurningAudio.play().catch(error => {
+                            console.log('Ass burning audio play failed:', error);
+                        });
+                    }
+                } catch (error) {
+                    console.log('Ass burning audio playback failed:', error);
+                }
+            }
+
+            playFireBurningSound() {
+                if (this.isMuted) return;
+
+                try {
+                    // Play the fire burning sound
+                    if (this.fireBurningAudio) {
+                        this.fireBurningAudio.currentTime = 0; // Reset to beginning
+                        this.fireBurningAudio.play().catch(error => {
+                            console.log('Fire burning audio play failed:', error);
+                        });
+                    }
+                } catch (error) {
+                    console.log('Fire burning audio playback failed:', error);
                 }
             }
 
