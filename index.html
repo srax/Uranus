@@ -34,13 +34,52 @@
 
         .hud {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 19%;
+            left: 49%;
+            transform: translate(-50%, -50%);
             z-index: 1000;
-            color: #00ffff;
-            font-size: 2rem;
-            text-shadow: 0 0 10px #00ffff;
             user-select: none;
+            pointer-events: none;
+        }
+
+        #fart-counter {
+            font-size: 2rem;
+            font-weight: 900;
+            font-family: 'Arial Black', Arial, sans-serif;
+            color: #ffffff;
+            text-align: center;
+            
+            /* Bubble lettering effect */
+            text-shadow: 
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000,
+                -4px 0 0 #000,
+                4px 0 0 #000,
+                0 -4px 0 #000,
+                0 4px 0 #000,
+                0 0 10px #00ffff,
+                0 0 20px #00ffff;
+            
+            transition: all 0.1s ease;
+        }
+
+        #fart-counter.shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-3px, -2px) rotate(-1deg); }
+            20% { transform: translate(3px, 0px) rotate(1deg); }
+            30% { transform: translate(-3px, 2px) rotate(0deg); }
+            40% { transform: translate(3px, -2px) rotate(1deg); }
+            50% { transform: translate(-2px, 2px) rotate(-1deg); }
+            60% { transform: translate(2px, -2px) rotate(0deg); }
+            70% { transform: translate(-2px, 0px) rotate(-1deg); }
+            80% { transform: translate(2px, 2px) rotate(1deg); }
+            90% { transform: translate(-2px, -2px) rotate(0deg); }
         }
 
         .country-info {
@@ -506,7 +545,7 @@
     <div id="scene-container"></div>
     
     <div class="hud">
-        <div id="fart-counter">💨 0</div>
+        <div id="fart-counter">0</div>
     </div>
     
     <div class="country-info">
@@ -2777,7 +2816,16 @@
             }
 
             updateCounter() {
-                document.getElementById('fart-counter').textContent = `💨 ${this.fartCount}`;
+                const counter = document.getElementById('fart-counter');
+                counter.textContent = this.fartCount.toString();
+                
+                // Add shake animation
+                counter.classList.add('shake');
+                
+                // Remove shake animation after it completes
+                setTimeout(() => {
+                    counter.classList.remove('shake');
+                }, 300);
             }
 
             toggleMute() {
